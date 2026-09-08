@@ -244,6 +244,29 @@ def show_detail():
     print(DIVIDER)
 
 
+def toggle_favorite():
+    """번호로 고른 프롬프트의 즐겨찾기를 켜거나 끈다."""
+    print("\n=== 즐겨찾기 관리 ===")
+    selected = select_prompt("프롬프트 번호 입력: ")
+    if selected is None:
+        return
+
+    _, prompt = selected
+    prompt["favorite"] = not prompt["favorite"]
+
+    if prompt["favorite"]:
+        print(f"\n'{prompt['title']}' 프롬프트를 즐겨찾기에 추가했습니다! ⭐")
+    else:
+        print(f"\n'{prompt['title']}' 프롬프트를 즐겨찾기에서 해제했습니다.")
+
+
+def show_favorites():
+    """즐겨찾기로 표시한 프롬프트만 모아서 출력한다."""
+    print("\n=== 즐겨찾기 목록 ===")
+    items = [pair for pair in numbered_prompts() if pair[1]["favorite"]]
+    print_prompts(items, "[안내] 즐겨찾기한 프롬프트가 없습니다.")
+
+
 def show_menu():
     """메인 메뉴를 출력한다."""
     print()
@@ -253,6 +276,8 @@ def show_menu():
     print("3. 카테고리별 조회")
     print("4. 프롬프트 검색")
     print("5. 프롬프트 상세 보기")
+    print("6. 즐겨찾기 관리")
+    print("7. 즐겨찾기 목록")
     print("0. 종료")
 
 
@@ -272,6 +297,10 @@ def main():
             search_prompt()
         elif choice == "5":
             show_detail()
+        elif choice == "6":
+            toggle_favorite()
+        elif choice == "7":
+            show_favorites()
         elif choice == "0":
             print("\n프로그램을 종료합니다.")
             break
