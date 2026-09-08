@@ -5,6 +5,7 @@
 """
 
 CATEGORIES = ["텍스트 생성", "이미지 생성", "영상 생성", "페르소나", "자동화", "기타"]
+DIVIDER = "─" * 40
 
 # 이전 미션(GenAI 기초 1~3)에서 실제로 작성했던 프롬프트를 기본 데이터로 등록한다.
 prompts = [
@@ -208,6 +209,41 @@ def search_prompt():
     print(f"\n{len(items)}개의 프롬프트를 찾았습니다.")
 
 
+def select_prompt(label):
+    """번호를 입력받아 (번호, 프롬프트)를 돌려준다. 잘못된 번호면 None."""
+    if not prompts:
+        print("[안내] 등록된 프롬프트가 없습니다.")
+        return None
+
+    choice = input(label).strip()
+    if not choice.isdigit() or not 1 <= int(choice) <= len(prompts):
+        print(f"[안내] 1 ~ {len(prompts)} 사이의 번호를 입력해 주세요.")
+        return None
+
+    number = int(choice)
+    return number, prompts[number - 1]
+
+
+def show_detail():
+    """번호로 프롬프트 하나를 골라 전체 내용을 출력한다."""
+    print("\n=== 프롬프트 상세 보기 ===")
+    selected = select_prompt("번호 입력: ")
+    if selected is None:
+        return
+
+    number, prompt = selected
+    print()
+    print(DIVIDER)
+    print(f"번호: {number}")
+    print(f"제목: {prompt['title']}")
+    print(f"카테고리: {prompt['category']}")
+    print(f"즐겨찾기: {'⭐' if prompt['favorite'] else '없음'}")
+    print(DIVIDER)
+    print("내용:")
+    print(prompt["content"])
+    print(DIVIDER)
+
+
 def show_menu():
     """메인 메뉴를 출력한다."""
     print()
@@ -216,6 +252,7 @@ def show_menu():
     print("2. 프롬프트 목록")
     print("3. 카테고리별 조회")
     print("4. 프롬프트 검색")
+    print("5. 프롬프트 상세 보기")
     print("0. 종료")
 
 
@@ -233,6 +270,8 @@ def main():
             show_by_category()
         elif choice == "4":
             search_prompt()
+        elif choice == "5":
+            show_detail()
         elif choice == "0":
             print("\n프로그램을 종료합니다.")
             break
