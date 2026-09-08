@@ -176,12 +176,24 @@ def show_list():
     print_prompts(numbered_prompts(), "[안내] 등록된 프롬프트가 없습니다.")
 
 
+def show_by_category():
+    """카테고리를 선택받아 해당 카테고리의 프롬프트만 출력한다."""
+    print("\n=== 카테고리별 조회 ===")
+    category = choose_category()
+
+    items = [pair for pair in numbered_prompts() if pair[1]["category"] == category]
+
+    print(f"\n[{category}] 카테고리 프롬프트:")
+    print_prompts(items, f"[안내] '{category}' 카테고리에는 아직 프롬프트가 없습니다.")
+
+
 def show_menu():
     """메인 메뉴를 출력한다."""
     print()
     print("=== 나만의 프롬프트 관리 ===")
     print("1. 프롬프트 추가")
     print("2. 프롬프트 목록")
+    print("3. 카테고리별 조회")
     print("0. 종료")
 
 
@@ -195,6 +207,8 @@ def main():
             add_prompt()
         elif choice == "2":
             show_list()
+        elif choice == "3":
+            show_by_category()
         elif choice == "0":
             print("\n프로그램을 종료합니다.")
             break
