@@ -148,11 +148,40 @@ def add_prompt():
     print(f"\n'{title}' 프롬프트가 추가되었습니다! (총 {len(prompts)}개)")
 
 
+def numbered_prompts():
+    """전체 목록 기준 번호를 붙여 (번호, 프롬프트) 쌍의 리스트로 만든다."""
+    return list(enumerate(prompts, start=1))
+
+
+def format_summary(number, prompt):
+    """목록 한 줄을 '번호. [카테고리] 제목 ⭐' 형태로 만든다."""
+    star = " ⭐" if prompt["favorite"] else ""
+    return f"{number}. [{prompt['category']}] {prompt['title']}{star}"
+
+
+def print_prompts(items, empty_message):
+    """(번호, 프롬프트) 쌍 목록을 출력한다. 번호는 항상 전체 목록 기준이다."""
+    if not items:
+        print(empty_message)
+        return
+
+    for number, prompt in items:
+        print(format_summary(number, prompt))
+    print(f"\n총 {len(items)}개의 프롬프트")
+
+
+def show_list():
+    """저장된 모든 프롬프트를 번호와 함께 출력한다."""
+    print("\n=== 프롬프트 목록 ===")
+    print_prompts(numbered_prompts(), "[안내] 등록된 프롬프트가 없습니다.")
+
+
 def show_menu():
     """메인 메뉴를 출력한다."""
     print()
     print("=== 나만의 프롬프트 관리 ===")
     print("1. 프롬프트 추가")
+    print("2. 프롬프트 목록")
     print("0. 종료")
 
 
@@ -164,6 +193,8 @@ def main():
 
         if choice == "1":
             add_prompt()
+        elif choice == "2":
+            show_list()
         elif choice == "0":
             print("\n프로그램을 종료합니다.")
             break
