@@ -39,6 +39,7 @@ prompts = [
         ),
         "category": "페르소나",
         "favorite": True,
+        "views": 0,
     },
     {
         "title": "서비스 장애 사과 메일 초안 요청",
@@ -57,6 +58,7 @@ prompts = [
         ),
         "category": "텍스트 생성",
         "favorite": False,
+        "views": 0,
     },
     {
         "title": "여백 쿠션 제품 리빌 컷 (veo 3.1)",
@@ -74,6 +76,7 @@ prompts = [
         ),
         "category": "영상 생성",
         "favorite": True,
+        "views": 0,
     },
     {
         "title": "여백 글래스 스킨 모델 비주얼",
@@ -86,6 +89,7 @@ prompts = [
         ),
         "category": "이미지 생성",
         "favorite": False,
+        "views": 0,
     },
     {
         "title": "뉴스레터 구독 웹훅 분기 워크플로우 설계",
@@ -104,6 +108,7 @@ prompts = [
         ),
         "category": "자동화",
         "favorite": False,
+        "views": 0,
     },
 ]
 
@@ -144,7 +149,13 @@ def add_prompt():
     category = choose_category()
 
     prompts.append(
-        {"title": title, "content": content, "category": category, "favorite": False}
+        {
+            "title": title,
+            "content": content,
+            "category": category,
+            "favorite": False,
+            "views": 0,
+        }
     )
     print(f"\n'{title}' 프롬프트가 추가되었습니다! (총 {len(prompts)}개)")
 
@@ -232,12 +243,15 @@ def show_detail():
         return
 
     number, prompt = selected
+    prompt["views"] += 1
+
     print()
     print(DIVIDER)
     print(f"번호: {number}")
     print(f"제목: {prompt['title']}")
     print(f"카테고리: {prompt['category']}")
     print(f"즐겨찾기: {'⭐' if prompt['favorite'] else '없음'}")
+    print(f"조회수: {prompt['views']}회")
     print(DIVIDER)
     print("내용:")
     print(prompt["content"])
@@ -317,6 +331,23 @@ def delete_prompt():
     print(f"\n'{prompt['title']}' 프롬프트를 삭제했습니다. (남은 {len(prompts)}개)")
 
 
+def show_top_viewed():
+    """상세 보기로 많이 열어 본 순서대로 프롬프트를 정렬해 보여준다."""
+    print("\n=== 조회수 TOP ===")
+    if not prompts:
+        print("[안내] 등록된 프롬프트가 없습니다.")
+        return
+
+    viewed = [pair for pair in numbered_prompts() if pair[1]["views"] > 0]
+    if not viewed:
+        print("[안내] 아직 상세 보기로 열어 본 프롬프트가 없습니다.")
+        return
+
+    ranked = sorted(viewed, key=lambda pair: pair[1]["views"], reverse=True)
+    for rank, (number, prompt) in enumerate(ranked[:5], start=1):
+        print(f"{rank}위 (조회 {prompt['views']}회) {format_summary(number, prompt)}")
+
+
 def show_menu():
     """메인 메뉴를 출력한다."""
     print()
@@ -330,6 +361,7 @@ def show_menu():
     print("7. 즐겨찾기 목록")
     print("8. 프롬프트 수정")
     print("9. 프롬프트 삭제")
+    print("10. 조회수 TOP")
     print("0. 종료")
 
 
@@ -357,6 +389,8 @@ def main():
             edit_prompt()
         elif choice == "9":
             delete_prompt()
+        elif choice == "10":
+            show_top_viewed()
         elif choice == "0":
             print("\n프로그램을 종료합니다.")
             break
