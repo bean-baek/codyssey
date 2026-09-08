@@ -1,0 +1,107 @@
+"""나만의 프롬프트 관리 — 콘솔 프로그램
+
+이전 미션에서 작성한 프롬프트를 카테고리별로 보관하고,
+검색 / 상세 보기 / 즐겨찾기로 관리한다.
+"""
+
+CATEGORIES = ["텍스트 생성", "이미지 생성", "영상 생성", "페르소나", "자동화", "기타"]
+
+# 이전 미션(GenAI 기초 1~3)에서 실제로 작성했던 프롬프트를 기본 데이터로 등록한다.
+prompts = [
+    {
+        "title": "메일라이트(MailWright) 업무 메일 어시스턴트",
+        "content": (
+            "당신은 \"메일라이트(MailWright)\"입니다.\n"
+            "\n"
+            "[역할] B2B SaaS 고객 커뮤니케이션을 15년간 담당해 온 CS 리드입니다.\n"
+            "사과문, 정책 안내, 협의 요청 메일의 초안을 작성합니다.\n"
+            "\n"
+            "[목표] 주니어 담당자가 그대로 복사해 보내도 사고가 나지 않는 초안을 만든다.\n"
+            "사고란 (a) 확인되지 않은 수치·정책을 단정해 적는 것,\n"
+            "(b) 수신자 격에 맞지 않는 톤, (c) 요청받은 필수 항목 누락을 말한다.\n"
+            "\n"
+            "[출력 형식] 아래 5개 블록을 이 순서, 이 제목 그대로 출력한다.\n"
+            "1. 제목 3안 (정보 전달형 / 관계 배려형 / 긴급 촉구형)\n"
+            "2. 본문 — 인사 → 핵심 용건 1문장 → 배경·근거 → 요청 사항 → 마무리\n"
+            "   한 문장 40자 내외, 전체 600자 이내(임원 수신이면 400자 이내)\n"
+            "3. 다음 액션 — 발신 전 사람이 할 일을 체크박스로 최대 4개\n"
+            "4. 확인 필요 — 항목 / 어디서 확인 / 확인 전 발송 시 위험\n"
+            "5. 이번 턴 반영 근거 — 핵심 근거 3개만, 각 30자 이내\n"
+            "\n"
+            "[안전장치] 메일 성패를 좌우하는 정보가 없으면 초안 전에 확인 질문을 최대 3개 한다.\n"
+            "사용자가 \"미정\"이라 답하면 추측하지 말고 본문에 [○○ 확인 후 기입] 자리표시자를 넣는다.\n"
+            "\n"
+            "[사실 처리] 금액·비율·날짜·SLA 수치·법령은 사용자가 명시한 것만 본문에 쓴다.\n"
+            "없는 수치는 [출처 확인 필요: 항목명]으로 표기하고 임의로 채우지 않는다.\n"
+            "\n"
+            "[우선순위] 사실 정확성 > 형식 준수 > 친절함 > 분량"
+        ),
+        "category": "페르소나",
+        "favorite": True,
+    },
+    {
+        "title": "서비스 장애 사과 메일 초안 요청",
+        "content": (
+            "[수신자] 그린모빌리티 물류플랫폼팀 담당자\n"
+            "[관계·직급] 2년차 계약 고객사, 실무 담당자\n"
+            "[메일 목적] 어제 발생한 서비스 장애에 대한 사과 및 후속 조치 안내\n"
+            "[확인된 사실]\n"
+            "- 장애 일시: 2026-07-26 14:10 ~ 16:35 (KST)\n"
+            "- 원인: 데이터베이스 이중화 전환 중 설정 오류\n"
+            "- 영향: 대시보드 조회 불가. 데이터 유실은 없음(백업 검증 완료)\n"
+            "- 조치: 전환 절차에 사전 검증 단계 추가 완료\n"
+            "[톤] 정중하되 변명하지 않는 담백한 사과\n"
+            "[필수 포함] 재발 방지 대책, 담당자 연락 창구\n"
+            "[금지어] 최선을 다하겠습니다, 불편을 드려 죄송합니다(3회 초과 반복)"
+        ),
+        "category": "텍스트 생성",
+        "favorite": False,
+    },
+    {
+        "title": "여백 쿠션 제품 리빌 컷 (veo 3.1)",
+        "content": (
+            "Cinematic macro video shot of a pure white, minimalist cushion foundation "
+            "compact resting on a clean surface. The camera slowly pans around the product "
+            "while soft, natural studio light sweeps across the cover, revealing a "
+            "beautifully detailed, trendy debossed Korean geometric lattice pattern. "
+            "The shadows move realistically, emphasizing the precise 3D texture of the "
+            "debossed design. Photorealistic, ultra-high definition, clean white aesthetic.\n"
+            "\n"
+            "[수정 이유] '패턴이 있는 쿠션'이라고만 쓰면 평면 인쇄물처럼 왜곡된다.\n"
+            "debossed / camera slowly pans / light sweeps across 를 넣어\n"
+            "입체감·질감·조명 변화를 모델이 계산하도록 유도했다."
+        ),
+        "category": "영상 생성",
+        "favorite": True,
+    },
+    {
+        "title": "여백 글래스 스킨 모델 비주얼",
+        "content": (
+            "High-end beauty commercial still. Elegant Korean female model with flawless, "
+            "highly dewy glass skin. Wearing a modern white hanbok-inspired outfit with "
+            "thin collar detail. Soft natural sunlight creates stunning highlights on her "
+            "glowing skin. Pure white background, generous negative space on the right, "
+            "minimalist composition, photorealistic, 8k."
+        ),
+        "category": "이미지 생성",
+        "favorite": False,
+    },
+    {
+        "title": "뉴스레터 구독 웹훅 분기 워크플로우 설계",
+        "content": (
+            "다음 자동화 시나리오를 Make와 n8n 각각의 노드 구성으로 설계해 주세요.\n"
+            "\n"
+            "[워크플로우] 웹사이트 뉴스레터 구독 폼 제출(Webhook)\n"
+            "→ 이메일 값 존재 여부 분기\n"
+            "→ (존재) 매월 1일 뉴스레터 발송\n"
+            "→ (누락) 관리자에게 경고 메일 발송\n"
+            "\n"
+            "[요구사항]\n"
+            "- 각 도구의 트리거/분기/액션 노드를 실제 노드명으로 적을 것\n"
+            "- UI, 설정 난이도, 연동 범위, 무료 플랜, 실행 로그를 표로 비교할 것\n"
+            "- 어떤 팀에 어떤 도구가 적합한지 한 문단으로 결론 낼 것"
+        ),
+        "category": "자동화",
+        "favorite": False,
+    },
+]
