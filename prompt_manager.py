@@ -107,10 +107,52 @@ prompts = [
 ]
 
 
+def input_required(label):
+    """빈 값이 들어오면 다시 물어보고, 값이 채워질 때까지 반복한다."""
+    while True:
+        value = input(label).strip()
+        if value:
+            return value
+        print("[안내] 값을 입력해 주세요.")
+
+
+def choose_category():
+    """미리 정의된 카테고리를 고르거나 직접 입력받는다."""
+    print("\n카테고리 선택:")
+    for number, name in enumerate(CATEGORIES, start=1):
+        print(f"{number}. {name}")
+    print("0. 직접 입력")
+
+    while True:
+        choice = input("선택: ").strip()
+
+        if choice == "0":
+            return input_required("카테고리 이름: ")
+
+        if choice.isdigit() and 1 <= int(choice) <= len(CATEGORIES):
+            return CATEGORIES[int(choice) - 1]
+
+        print("[안내] 목록에 있는 번호를 입력해 주세요.")
+
+
+def add_prompt():
+    """새 프롬프트를 입력받아 목록에 추가한다."""
+    print("\n=== 프롬프트 추가 ===")
+    title = input_required("제목: ")
+    content = input_required("내용: ")
+    category = choose_category()
+
+    prompts.append(
+        {"title": title, "content": content, "category": category, "favorite": False}
+    )
+    print(f"\n'{title}' 프롬프트가 추가되었습니다! (총 {len(prompts)}개)")
+
+
 def show_menu():
     """메인 메뉴를 출력한다."""
     print()
     print("=== 나만의 프롬프트 관리 ===")
+    print("1. 프롬프트 추가")
     print("0. 종료")
 
 
@@ -120,7 +162,9 @@ def main():
         show_menu()
         choice = input("선택: ").strip()
 
-        if choice == "0":
+        if choice == "1":
+            add_prompt()
+        elif choice == "0":
             print("\n프로그램을 종료합니다.")
             break
         else:
