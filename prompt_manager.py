@@ -267,6 +267,56 @@ def show_favorites():
     print_prompts(items, "[안내] 즐겨찾기한 프롬프트가 없습니다.")
 
 
+def preview(text, length=30):
+    """여러 줄 내용을 한 줄로 줄여 미리보기 문자열을 만든다."""
+    one_line = text.replace("\n", " ")
+    if len(one_line) <= length:
+        return one_line
+    return one_line[:length] + "..."
+
+
+def edit_prompt():
+    """번호로 고른 프롬프트의 제목/내용/카테고리를 고친다."""
+    print("\n=== 프롬프트 수정 ===")
+    selected = select_prompt("수정할 프롬프트 번호: ")
+    if selected is None:
+        return
+
+    _, prompt = selected
+    print("\n(엔터만 누르면 기존 값을 그대로 둡니다)")
+
+    title = input(f"제목 [{prompt['title']}]: ").strip()
+    if title:
+        prompt["title"] = title
+
+    content = input(f"내용 [{preview(prompt['content'])}]: ").strip()
+    if content:
+        prompt["content"] = content
+
+    answer = input(f"카테고리를 바꿀까요? 현재 [{prompt['category']}] (y/N): ").strip()
+    if answer.lower() == "y":
+        prompt["category"] = choose_category()
+
+    print(f"\n'{prompt['title']}' 프롬프트를 수정했습니다.")
+
+
+def delete_prompt():
+    """번호로 고른 프롬프트를 확인 후 목록에서 지운다."""
+    print("\n=== 프롬프트 삭제 ===")
+    selected = select_prompt("삭제할 프롬프트 번호: ")
+    if selected is None:
+        return
+
+    number, prompt = selected
+    answer = input(f"'{prompt['title']}' 프롬프트를 정말 삭제할까요? (y/N): ").strip()
+    if answer.lower() != "y":
+        print("\n삭제를 취소했습니다.")
+        return
+
+    prompts.pop(number - 1)
+    print(f"\n'{prompt['title']}' 프롬프트를 삭제했습니다. (남은 {len(prompts)}개)")
+
+
 def show_menu():
     """메인 메뉴를 출력한다."""
     print()
@@ -278,6 +328,8 @@ def show_menu():
     print("5. 프롬프트 상세 보기")
     print("6. 즐겨찾기 관리")
     print("7. 즐겨찾기 목록")
+    print("8. 프롬프트 수정")
+    print("9. 프롬프트 삭제")
     print("0. 종료")
 
 
@@ -301,6 +353,10 @@ def main():
             toggle_favorite()
         elif choice == "7":
             show_favorites()
+        elif choice == "8":
+            edit_prompt()
+        elif choice == "9":
+            delete_prompt()
         elif choice == "0":
             print("\n프로그램을 종료합니다.")
             break
