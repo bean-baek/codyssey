@@ -4,8 +4,13 @@
 검색 / 상세 보기 / 즐겨찾기로 관리한다.
 """
 
+import json
+import os
+
 CATEGORIES = ["텍스트 생성", "이미지 생성", "영상 생성", "페르소나", "자동화", "기타"]
 DIVIDER = "─" * 40
+DATA_FILE = "prompts.json"
+EXPORT_DIR = "export"
 
 # 이전 미션(GenAI 기초 1~3)에서 실제로 작성했던 프롬프트를 기본 데이터로 등록한다.
 prompts = [
@@ -348,6 +353,59 @@ def show_top_viewed():
         print(f"{rank}위 (조회 {prompt['views']}회) {format_summary(number, prompt)}")
 
 
+def save_to_json():
+    """현재 프롬프트 목록을 JSON 파일로 저장한다."""
+    print("\n=== JSON 저장 ===")
+    with open(DATA_FILE, "w", encoding="utf-8") as file:
+        json.dump(prompts, file, ensure_ascii=False, indent=2)
+    print(f"{len(prompts)}개의 프롬프트를 '{DATA_FILE}'에 저장했습니다.")
+
+
+def load_from_json():
+    """JSON 파일에서 프롬프트 목록을 불러와 현재 목록을 대체한다."""
+    global prompts
+
+    print("\n=== JSON 불러오기 ===")
+    if not os.path.exists(DATA_FILE):
+        print(f"[안내] '{DATA_FILE}' 파일이 없습니다. 먼저 저장해 주세요.")
+        return
+
+    with open(DATA_FILE, "r", encoding="utf-8") as file:
+        prompts = json.load(file)
+    print(f"{len(prompts)}개의 프롬프트를 불러왔습니다.")
+
+
+def export_markdown():
+    """카테고리별로 하나씩 마크다운 파일을 만들어 내보낸다."""
+    print("\n=== 마크다운 내보내기 ===")
+    if not prompts:
+        print("[안내] 내보낼 프롬프트가 없습니다.")
+        return
+
+    os.makedirs(EXPORT_DIR, exist_ok=True)
+
+    categories = []
+    for prompt in prompts:
+        if prompt["category"] not in categories:
+            categories.append(prompt["category"])
+
+    for category in categories:
+        path = os.path.join(EXPORT_DIR, f"{category}.md")
+        with open(path, "w", encoding="utf-8") as file:
+            file.write(f"# {category}\n")
+            for prompt in prompts:
+                if prompt["category"] != category:
+                    continue
+                star = " ⭐" if prompt["favorite"] else ""
+                file.write(f"\n## {prompt['title']}{star}\n\n")
+                file.write("```\n")
+                file.write(prompt["content"])
+                file.write("\n```\n")
+        print(f"- {path}")
+
+    print(f"\n{len(categories)}개의 카테고리 파일을 '{EXPORT_DIR}/' 폴더에 만들었습니다.")
+
+
 def show_menu():
     """메인 메뉴를 출력한다."""
     print()
@@ -362,6 +420,9 @@ def show_menu():
     print("8. 프롬프트 수정")
     print("9. 프롬프트 삭제")
     print("10. 조회수 TOP")
+    print("11. JSON 파일로 저장")
+    print("12. JSON 파일에서 불러오기")
+    print("13. 카테고리별 마크다운 내보내기")
     print("0. 종료")
 
 
@@ -391,6 +452,12 @@ def main():
             delete_prompt()
         elif choice == "10":
             show_top_viewed()
+        elif choice == "11":
+            save_to_json()
+        elif choice == "12":
+            load_from_json()
+        elif choice == "13":
+            export_markdown()
         elif choice == "0":
             print("\n프로그램을 종료합니다.")
             break
