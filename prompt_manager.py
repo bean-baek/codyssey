@@ -105,3 +105,27 @@ prompts = [
         "favorite": False,
     },
 ]
+
+
+def show_menu():
+    """메인 메뉴를 출력한다."""
+    print()
+    print("=== 나만의 프롬프트 관리 ===")
+    print("0. 종료")
+
+
+def main():
+    """메뉴를 반복 출력하며 사용자의 선택을 처리한다."""
+    while True:
+        show_menu()
+        choice = input("선택: ").strip()
+
+        if choice == "0":
+            print("\n프로그램을 종료합니다.")
+            break
+        else:
+            print("\n[안내] 없는 번호입니다. 메뉴의 번호 중에서 선택해 주세요.")
+
+
+if __name__ == "__main__":
+    main()
