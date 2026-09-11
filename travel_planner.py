@@ -309,3 +309,78 @@ def get_recommendation(keys, date, city_count, errors):
         log("   ", f"응답 형식 문제({problem}) — 1회 재요청합니다.")
 
     raise RuntimeError("1차 추천을 받지 못했습니다.")
+
+
+# ---------------------------------------------------------------- Kakao Local (GET)
+
+
+def search_restaurants(keys, city, size, errors):
+    """도시 이름으로 맛집을 검색한다. 실패해도 예외를 던지지 않고 빈 리스트를 돌려준다.
+
+    REST 관점에서 볼 것:
+      - 메서드는 GET. '무엇을 달라'는 조회라서 조건을 URL 쿼리스트링에 붙인다.
+      - 인증은 Authorization: KakaoAK <키> 헤더.
+      - 같은 주소를 그대로 브라우저에 넣어도 결과를 볼 수 있는 게 GET의 특징이다.
+
+    미션 정책상 이 단계의 실패는 프로그램을 멈추지 않는다.
+    오류를 errors에 남기고 맛집을 '데이터 없음'으로 두고 계속 간다.
+    """
+    headers = {"Authorization": f"KakaoAK {keys['kakao']}"}
+    params = {"query": f"{city} 맛집", "size": size, "page": 1}
+
+    try:
+        response = requests.get(
+            KAKAO_KEYWORD_ENDPOINT, headers=headers, params=params, timeout=TIMEOUT
+        )
+    except requests.RequestException as exc:
+        add_error(errors, "place_search", "NETWORK_ERROR", exc)
+        log("   ", f"오류: 네트워크 문제로 맛집 검색 실패 ({exc.__class__.__name__})")
+        return []
+
+    if response.status_code in (401, 403):
+        add_error(errors, "place_search", "AUTH_ERROR", f"HTTP {response.status_code}")
+        log("   ", f"오류: 인증 실패({response.status_code}). KAKAO_REST_API_KEY를 확인하세요.")
+        return []
+    if response.status_code == 429:
+        add_error(errors, "place_search", "QUOTA_ERROR", "HTTP 429")
+        log("   ", "오류: 요청 한도 초과(429).")
+        return []
+    if response.status_code != 200:
+        add_error(errors, "place_search", "HTTP_ERROR", f"HTTP {response.status_code}")
+        log("   ", f"오류: 장소 API가 HTTP {response.status_code}를 반환했습니다.")
+        return []
+
+    try:
+        documents = response.json().get("documents", [])
+    except ValueError as exc:
+        add_error(errors, "place_search", "PARSE_ERROR", exc)
+        log("   ", "오류: 장소 API 응답을 JSON으로 읽지 못했습니다.")
+        return []
+
+    if not documents:
+        add_error(errors, "place_search", "EMPTY_RESULT", f"0 results for query={params['query']}")
+        log("   ", f"검색 결과 0건 ({city}) — '데이터 없음'으로 두고 다음 단계로 진행합니다.")
+        return []
+
+    return [normalize_place(document) for document in documents]
+
+
+def normalize_place(document):
+    """카카오 응답에서 미션이 요구하는 필드만 골라 담는다."""
+    return {
+        "name": document.get("place_name", ""),
+        "address": document.get("road_address_name") or document.get("address_name", ""),
+        "category": document.get("category_name", ""),
+        "url": document.get("place_url", ""),
+        "phone": document.get("phone", ""),
+        "x": to_float(document.get("x")),  # 경도(lng)
+        "y": to_float(document.get("y")),  # 위도(lat)
+    }
+
+
+def to_float(value):
+    """카카오는 좌표를 문자열로 준다. 숫자로 바꾸되 실패하면 None."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
