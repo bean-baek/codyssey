@@ -93,11 +93,11 @@
         <div class="tab-spacer"></div>
         <div class="tab-actions">
           <button class="iconbtn" id="toggle-compare" type="button"
-            aria-pressed="false" title="비교 보기  ⌘\">
+            aria-pressed="false" title="비교 보기">
             <span class="ico-split" aria-hidden="true"></span><span>비교</span>
           </button>
           <button class="iconbtn" id="persona-toggle" type="button"
-            aria-expanded="false" aria-controls="persona-drawer" title="편집 방침  ⌘,">
+            aria-expanded="false" aria-controls="persona-drawer" title="편집 방침">
             <span class="ico-gear" aria-hidden="true"></span><span>방침</span>
           </button>
           <button class="btn btn-primary btn-sm" id="revise-run" type="button">
@@ -170,7 +170,7 @@
         <div class="editpane">
           <label class="sr-only" for="manuscript">원고</label>
           <textarea id="manuscript" class="paper" spellcheck="false"
-            placeholder="초고를 붙여넣으세요.&#10;&#10;30자 이상 5,000자 이하로 요청할 수 있습니다.&#10;⌘K 를 누르면 명령을 찾을 수 있습니다."></textarea>
+            placeholder="초고를 붙여넣으세요.&#10;&#10;30자 이상 5,000자 이하로 요청할 수 있습니다.&#10;⌘K 를 누르면 할 수 있는 일이 모두 나옵니다."></textarea>
         </div>
 
         <div class="diffpane" id="diffpane" hidden>
@@ -191,7 +191,7 @@
           <span class="panel-title">제안</span>
           <span class="panel-count" id="suggest-count">0</span>
           <div class="panel-spacer"></div>
-          <button class="btn btn-quiet btn-sm" id="apply-all" type="button" hidden>모두 반영 <kbd>⇧⌘↵</kbd></button>
+          <button class="btn btn-quiet btn-sm" id="apply-all" type="button" hidden>모두 반영</button>
         </div>
         <div class="notice" id="revise-notice" role="alert" hidden></div>
         <div class="results" id="revise-results" aria-live="polite">
@@ -199,7 +199,7 @@
             <p class="blank-title">제안이 여기에 쌓입니다</p>
             <p class="blank-body">
               문장마다 <strong>무엇을 고칠지</strong>와 <strong>왜 그런지</strong>가 함께 옵니다.
-              <kbd>⌘</kbd><kbd>K</kbd> 로 명령을 찾을 수 있습니다.
+<kbd>⌘</kbd><kbd>K</kbd> 를 누르면 할 수 있는 일이 모두 나옵니다.
             </p>
           </div>
         </div>
@@ -359,8 +359,10 @@
     </div>
     <ul class="palette-list" id="palette-list" role="listbox"></ul>
     <div class="palette-foot">
-      <span><kbd>↑</kbd><kbd>↓</kbd> 이동</span>
-      <span><kbd>↵</kbd> 실행</span>
+      <span><strong>번호를 누르면 바로 실행</strong>됩니다</span>
+      <span class="palette-foot-sep"></span>
+      <span>이름을 입력해 찾을 수도 있습니다</span>
+      <span class="palette-foot-sep"></span>
       <span><kbd>esc</kbd> 닫기</span>
     </div>
   </div>
