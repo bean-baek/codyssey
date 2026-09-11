@@ -12,6 +12,11 @@ function sectionFromHash() {
   return document.querySelector(`[data-section="${CSS.escape(id)}"]`) ? id : DEFAULT;
 }
 
+/** 명령 팔레트에서 섹션을 옮길 때 쓴다. */
+export function go(id) {
+  location.hash = `#${id}`;
+}
+
 /**
  * @param {(id: string) => void} [onChange] 섹션이 바뀔 때마다 호출된다
  */

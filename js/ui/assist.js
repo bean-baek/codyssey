@@ -35,6 +35,16 @@ const MODES = {
   },
 };
 
+let api = null;
+
+/**
+ * 팔레트에서 부른다. 모드를 고르고 값을 채운 뒤 바로 요청한다.
+ * 원고에서 단어를 선택한 채 ⌘K 를 누르는 흐름이 이 함수로 들어온다.
+ */
+export function askAssist(mode, query, context) {
+  api?.ask(mode, query, context);
+}
+
 export function initAssist() {
   const tabs = [...document.querySelectorAll('[role="tab"][data-mode]')];
   const desc = document.getElementById('assist-desc');
@@ -109,6 +119,16 @@ export function initAssist() {
       results.append(chip);
     });
   }
+
+  api = {
+    ask(mode, text, ctx) {
+      selectMode(mode);
+      if (text) query.value = text;
+      if (ctx && MODES[mode].context) context.value = ctx;
+      if (query.value.trim()) run();
+      else query.focus();
+    },
+  };
 
   tabs.forEach((t) => t.addEventListener('click', () => selectMode(t.dataset.mode)));
   runBtn.addEventListener('click', run);

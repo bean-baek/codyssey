@@ -1,5 +1,5 @@
 /**
- * js/ui/editor.js — 퇴고 섹션
+ * js/ui/editor.js — 퇴고 화면
  *
  * 흐름: 원고 → splitSentences → revise() → 제안 카드 → 수락 시 원문 치환
  *
@@ -9,6 +9,7 @@
 
 import { revise, AIError } from '../core/ai.js';
 import { splitSentences, applySuggestions } from '../core/sentences.js';
+import * as compare from './compare.js';
 
 const MAX_TEXT = 5000;
 const MIN_TEXT = 30;
@@ -20,31 +21,37 @@ const SAMPLE = `그날 저녁에 나는 그 골목을 다시 걸었다. 그리�
 
 export function initEditor(getPersona) {
   const input = document.getElementById('manuscript');
-  const counter = document.getElementById('counter');
   const runBtn = document.getElementById('revise-run');
-  const sampleBtn = document.getElementById('revise-sample');
   const notice = document.getElementById('revise-notice');
   const results = document.getElementById('revise-results');
+  const count = document.getElementById('suggest-count');
+  const applyAll = document.getElementById('apply-all');
+  const dirty = document.getElementById('tab-dirty');
+  const stChars = document.getElementById('st-chars');
+  const stSentences = document.getElementById('st-sentences');
 
-  /** 마지막 요청 시점의 문장 분해 결과. 제안의 index가 이걸 가리킨다. */
+  /** 마지막 요청 시점의 문장 분해 결과. 제안의 index 가 이걸 가리킨다. */
   let sentences = [];
+  /** 아직 반영하지 않은 제안 */
+  let pending = [];
 
-  function updateCounter() {
+  function stats() {
     const n = input.value.length;
-    // 상한을 늘 함께 보여 준다. 넘고 나서 알려 주면 이미 늦다.
-    counter.textContent = `${n.toLocaleString()} / ${MAX_TEXT.toLocaleString()}자`;
-    counter.classList.toggle('over', n > MAX_TEXT);
+    stChars.textContent = `${n.toLocaleString()} / ${MAX_TEXT.toLocaleString()}`;
+    stChars.classList.toggle('is-over', n > MAX_TEXT);
+    stSentences.textContent = `문장 ${splitSentences(input.value).length}`;
+    dirty.hidden = !compare.hasBaseline() || input.value === undefined;
+    compare.refresh(input.value);
   }
 
-  function showNotice(message) {
+  const showNotice = (message) => {
     notice.textContent = message;
     notice.hidden = false;
-  }
-
-  function clearNotice() {
+  };
+  const clearNotice = () => {
     notice.hidden = true;
     notice.textContent = '';
-  }
+  };
 
   function setBusy(busy) {
     runBtn.disabled = busy;
@@ -58,8 +65,6 @@ export function initEditor(getPersona) {
     const text = input.value.trim();
     sentences = splitSentences(text);
 
-    // 실패하면 되돌려 놓는다. 진행 중 문구가 남아 있으면 오류를 띄워 놓고도
-    // 옆에서는 계속 불러오는 중처럼 보인다.
     const previous = results.innerHTML;
     results.innerHTML =
       '<p class="empty">문장을 하나씩 읽고 있습니다.<br>길이에 따라 10초 안팎 걸립니다.</p>';
@@ -71,31 +76,31 @@ export function initEditor(getPersona) {
         sentences: sentences.map((s) => s.text),
         persona: getPersona(),
       });
+      // 이 시점의 원고가 비교의 기준이 된다
+      compare.setBaseline(input.value);
       render(suggestions);
+      stats();
     } catch (err) {
       results.innerHTML = previous;
-      if (err instanceof AIError) showNotice(err.message);
-      else showNotice('알 수 없는 오류가 발생했습니다. 다시 시도해 주세요.');
-      // 원고는 어떤 경우에도 건드리지 않는다
+      showNotice(
+        err instanceof AIError ? err.message : '알 수 없는 오류가 발생했습니다. 다시 시도해 주세요.'
+      );
     } finally {
       setBusy(false);
     }
   }
 
   function render(suggestions) {
+    pending = [...suggestions];
     results.innerHTML = '';
+    count.textContent = String(suggestions.length);
+    applyAll.hidden = suggestions.length === 0;
 
     if (!suggestions.length) {
       results.innerHTML =
         '<p class="empty">고칠 지점을 찾지 못했습니다. 억지로 채우지 않는 것이 규칙입니다.</p>';
       return;
     }
-
-    const head = document.createElement('div');
-    head.className = 'results-head';
-    head.innerHTML = `<h3>제안 ${suggestions.length}개</h3><span>납득되는 것만 반영하세요</span>`;
-    results.append(head);
-
     suggestions.forEach((s) => results.append(card(s)));
   }
 
@@ -105,9 +110,13 @@ export function initEditor(getPersona) {
 
     const top = document.createElement('div');
     top.className = 'card-top';
-    top.innerHTML =
-      `<span class="badge">${escape(s.type)}</span>` +
-      `<span class="card-n">${s.index + 1}번째 문장</span>`;
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = s.type;
+    const num = document.createElement('span');
+    num.className = 'card-n';
+    num.textContent = `${s.index + 1}번째 문장`;
+    top.append(badge, num);
 
     const before = document.createElement('p');
     before.className = 'line before';
@@ -125,38 +134,41 @@ export function initEditor(getPersona) {
     actions.className = 'card-actions';
 
     const accept = document.createElement('button');
-    accept.className = 'btn btn-primary';
+    accept.className = 'btn btn-primary btn-sm';
     accept.type = 'button';
-    accept.textContent = '이 제안 반영';
+    accept.textContent = '반영';
 
     const skip = document.createElement('button');
-    skip.className = 'btn btn-quiet';
+    skip.className = 'btn btn-quiet btn-sm';
     skip.type = 'button';
     skip.textContent = '건너뛰기';
 
     accept.addEventListener('click', () => {
-      // 반영 시점의 원고를 기준으로 다시 분해해야 offset이 맞는다.
-      // 앞선 제안을 이미 반영했다면 뒤쪽 위치가 밀려 있기 때문이다.
-      const current = splitSentences(input.value);
-      const target = current[s.index];
-
-      if (!target || target.text !== s.original) {
-        markDone(el, actions, '원고가 바뀌어 반영할 수 없습니다. 다시 요청해 주세요.', false);
-        return;
-      }
-
-      input.value = applySuggestions(input.value, current, [
-        { index: s.index, revised: s.revised },
-      ]);
-      updateCounter();
-      markDone(el, actions, '반영했습니다', true);
+      const ok = applyOne(s);
+      markDone(el, actions, ok ? '반영했습니다' : '원고가 바뀌어 반영할 수 없습니다', ok);
     });
-
-    skip.addEventListener('click', () => markDone(el, actions, '건너뛰었습니다', false));
+    skip.addEventListener('click', () => {
+      pending = pending.filter((x) => x !== s);
+      markDone(el, actions, '건너뛰었습니다', false);
+    });
 
     actions.append(accept, skip);
     el.append(top, before, after, reason, actions);
     return el;
+  }
+
+  /** 반영 시점에 다시 분해해야 offset 이 맞는다. 앞 제안을 이미 반영했으면 뒤가 밀려 있다. */
+  function applyOne(s) {
+    const current = splitSentences(input.value);
+    const target = current[s.index];
+    if (!target || target.text !== s.original) return false;
+
+    input.value = applySuggestions(input.value, current, [
+      { index: s.index, revised: s.revised },
+    ]);
+    pending = pending.filter((x) => x !== s);
+    stats();
+    return true;
   }
 
   function markDone(el, actions, message, ok) {
@@ -168,29 +180,60 @@ export function initEditor(getPersona) {
     actions.append(span);
   }
 
-  function escape(s) {
-    return String(s).replace(/[&<>"']/g, (c) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  function applyRemaining() {
+    if (!pending.length) return 0;
+    // 뒤 인덱스부터 적용해야 offset 이 밀리지 않는다
+    const current = splitSentences(input.value);
+    const valid = pending.filter(
+      (s) => current[s.index] && current[s.index].text === s.original
     );
+    input.value = applySuggestions(input.value, current, valid);
+    pending = [];
+    stats();
+
+    [...results.querySelectorAll('.card:not(.done)')].forEach((el) => {
+      const actions = el.querySelector('.card-actions');
+      if (actions) markDone(el, actions, '반영했습니다', true);
+    });
+    return valid.length;
   }
 
-  input.addEventListener('input', updateCounter);
-  runBtn.addEventListener('click', run);
-
-  sampleBtn.addEventListener('click', () => {
+  function insertSample() {
     input.value = SAMPLE;
-    updateCounter();
+    stats();
     input.focus();
-  });
+  }
 
-  // ⌘Enter / Ctrl+Enter
-  input.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      e.preventDefault();
-      run();
-    }
-  });
+  function resetToBaseline() {
+    if (!compare.hasBaseline()) return false;
+    input.value = compare.baselineText();
+    stats();
+    return true;
+  }
 
-  updateCounter();
-  return { MIN_TEXT, MAX_TEXT };
+  input.addEventListener('input', stats);
+  runBtn.addEventListener('click', run);
+  applyAll.addEventListener('click', applyRemaining);
+
+  stats();
+
+  return {
+    run,
+    insertSample,
+    applyRemaining,
+    resetToBaseline,
+    getText: () => input.value,
+    focus: () => input.focus(),
+    selection: () => {
+      const el = document.getElementById('manuscript');
+      return el.value.slice(el.selectionStart, el.selectionEnd).trim();
+    },
+    sentenceAtCursor: () => {
+      const el = document.getElementById('manuscript');
+      const at = el.selectionStart;
+      const found = splitSentences(el.value).find((s) => at >= s.start && at <= s.end);
+      return found ? found.text : '';
+    },
+    pendingCount: () => pending.length,
+  };
 }
