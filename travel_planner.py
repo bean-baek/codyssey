@@ -14,6 +14,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sys
 import time
 
@@ -31,6 +32,8 @@ KAKAO_KEYWORD_ENDPOINT = "https://dapi.kakao.com/v2/local/search/keyword.json"
 # 장소 검색·모델 목록은 금방 끝나지만, 리포트 생성은 수십 초가 걸린다
 HTTP_TIMEOUT = 30
 LLM_TIMEOUT = 120
+# 한도/혼잡으로 잠시 기다렸다 재시도할 때 허용하는 최대 대기 시간(초)
+MAX_RETRY_WAIT = 70
 
 
 # ---------------------------------------------------------------- 공통 도구
@@ -56,6 +59,23 @@ def api_message(response):
         return response.json().get("error", {}).get("message", "")[:300]
     except ValueError:
         return response.text[:200]
+
+
+def retry_after_seconds(response):
+    """429 응답이 알려 주는 '몇 초 뒤에 다시 오라'를 초 단위로 꺼낸다."""
+    try:
+        details = response.json().get("error", {}).get("details", [])
+    except ValueError:
+        details = []
+
+    for detail in details:
+        if detail.get("@type", "").endswith("RetryInfo"):
+            match = re.search(r"([\d.]+)s", str(detail.get("retryDelay", "")))
+            if match:
+                return float(match.group(1))
+
+    match = re.search(r"retry in ([\d.]+)s", api_message(response))
+    return float(match.group(1)) if match else None
 
 
 # ---------------------------------------------------------------- CLI
@@ -300,7 +320,16 @@ def call_gemini(keys, prompt, as_json=False, busy_retry=True):
             f"  API 응답: {api_message(response)}"
         )
     if response.status_code == 429:
-        raise RuntimeError("요청 한도 초과(HTTP 429). 잠시 후 다시 시도하세요.")
+        # 무료 한도는 분당으로 걸린다. 응답이 몇 초 뒤에 다시 오라고 알려 준다.
+        wait = retry_after_seconds(response)
+        if busy_retry and wait is not None and wait <= MAX_RETRY_WAIT:
+            log("   ", f"분당 요청 한도 초과(429) — {wait:.0f}초 뒤 1회 재시도합니다.")
+            time.sleep(wait + 1)
+            return call_gemini(keys, prompt, as_json=as_json, busy_retry=False)
+        raise RuntimeError(
+            f"요청 한도 초과(HTTP 429). {api_message(response).splitlines()[0][:160]}\n"
+            "  무료 한도는 분당으로 걸립니다. 1분 뒤 다시 실행해 보세요."
+        )
     if response.status_code == 503:
         # 서버가 붐비는 일시적 상태다. 딱 한 번만 쉬었다 다시 보낸다.
         if busy_retry:
