@@ -22,10 +22,10 @@
 
 | 항목 | revise (퇴고) | assist (도우미) |
 |---|---|---|
-| 모델 | `claude-sonnet-5` | `claude-haiku-4-5-20251001` |
+| 모델 | `claude-sonnet-4` | `claude-haiku-4` |
 | 선택 이유 | 문맥 판단·사유 서술 품질이 필요 | 짧은 후보 나열, 속도가 품질보다 중요 |
 | max_tokens | 2000 | 300 |
-| 출력 흔들림 조절 | `thinking: disabled` + `effort: medium` | temperature — synonym 0.8 / recall 1.0 / impression 0.5 / classify 0.2 |
+| 출력 흔들림 조절 | `thinking: disabled` + `effort: medium` | 없음 (모델이 effort 미지원) |
 | 출력 강제 | tool_choice 강제 | tool_choice 강제 |
 | 서버 타임아웃 | 25s | 10s |
 | 클라이언트 타임아웃 | 20s | 8s |
@@ -35,13 +35,31 @@
 
 **모델 ID는 배포 전 콘솔에서 확인할 것.** 모델 ID는 갱신되며, 코드에서는 `MODEL_REVISE` / `MODEL_ASSIST` 상수 한 곳에서만 참조한다.
 
-> **revise에 temperature를 쓰지 않는 이유.** Sonnet 5는 `temperature`·`top_p`·`top_k`를
-> 받지 않는다. 보내면 400이다. 두 엔드포인트의 설정 항목이 다른 것은 실수가 아니라
-> 모델 세대 차이다. assist의 Haiku 4.5는 `temperature`를 그대로 쓴다.
+> **temperature를 쓰지 않는 이유.** 설계 초안은 모드별 temperature(synonym 0.8,
+> recall 1.0 …)로 후보의 다양성을 조절하려 했으나, 실제 SDK에는 `temperature`·`top_p`·`top_k`
+> 파라미터가 없다. 넘기면 모델에 닿기도 전에 `TypeError`가 난다.
 >
-> 대체 수단은 `output_config.effort`다. 퇴고는 판단의 폭보다 일관성이 중요하고
-> 클라이언트 타임아웃이 20초이므로 `thinking: disabled` + `effort: medium`을 쓴다.
-> 제안 품질이 부족하면 `thinking: adaptive` + `effort: low` 쪽을 먼저 시도한다.
+> 대체 수단은 `output_config.effort`인데 **이것도 두 모델이 서로 다르다.**
+> `claude-sonnet-4`는 받고, `claude-haiku-4`는 400(`does not support the effort parameter`)을
+> 돌려준다. 그래서 revise만 `thinking: disabled` + `effort: medium`을 쓰고
+> assist는 아무 조절 파라미터도 넘기지 않는다.
+>
+> 다양성 조절이 필요했던 recall 모드는 그 의도를 프롬프트 문구로 옮겼다
+> ("서로 다른 결의 후보를 섞어서 낸다. 비슷한 말만 나열하지 않는다").
+
+### 엔드포인트와 모델 교체
+
+`ANTHROPIC_BASE_URL`을 비워 두면 `api.anthropic.com`을 직접 호출하고,
+주소를 넣으면 그쪽으로 간다. 학습용 프록시처럼 쓸 수 있는 모델 목록이 다른 환경으로
+옮겨 갈 때 코드를 고치지 않기 위한 장치다.
+
+모델 ID도 `MODEL_REVISE` / `MODEL_ASSIST` 환경 변수로 덮어쓸 수 있다.
+**쓸 수 있는 모델은 엔드포인트마다 다르므로 옮길 때마다 목록을 확인한다.**
+
+```bash
+curl -s "$ANTHROPIC_BASE_URL/v1/models" \
+  -H "x-api-key: $ANTHROPIC_API_KEY" -H "anthropic-version: 2023-06-01"
+```
 
 ### 출력 강제 방식
 

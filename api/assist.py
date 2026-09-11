@@ -12,7 +12,10 @@ from http.server import BaseHTTPRequestHandler
 
 from anthropic import Anthropic
 
-MODEL_ASSIST = "claude-haiku-4-5-20251001"
+# 모델 ID와 엔드포인트는 환경 변수로 바꿀 수 있다. revise.py 와 같은 이유다.
+MODEL_ASSIST = os.environ.get("MODEL_ASSIST") or "claude-haiku-4"
+BASE_URL = os.environ.get("ANTHROPIC_BASE_URL") or None
+
 MAX_TOKENS = 300
 TIMEOUT_SEC = 10.0
 MAX_QUERY = 500
@@ -24,7 +27,6 @@ COMMON = (
 
 MODES = {
     "synonym": {
-        "temperature": 0.8,
         "count": 5,
         "system": (
             "주어진 단어를 대체할 표현을 제시한다.\n"
@@ -34,17 +36,15 @@ MODES = {
         ),
     },
     "recall": {
-        "temperature": 1.0,
         "count": 6,
         "system": (
             "사용자가 떠올리지 못하는 단어를 설명만 듣고 찾아준다.\n"
             "설명을 되풀이하지 말고 후보 단어·표현만 낸다.\n"
             "한 단어로 표현할 수 없으면 짧은 구도 허용한다.\n"
-            "서로 다른 결의 후보를 섞어서 낸다."
+            "서로 다른 결의 후보를 섞어서 낸다. 비슷한 말만 나열하지 않는다."
         ),
     },
     "impression": {
-        "temperature": 0.5,
         "count": 3,
         "system": (
             "주어진 문장이 독자에게 주는 인상을 형용사 또는 명사 3개로만 답한다.\n"
@@ -53,7 +53,6 @@ MODES = {
         ),
     },
     "classify": {
-        "temperature": 0.2,
         "count": 4,
         "system": (
             "원고 앞부분을 읽고 분류 태그 3개와 폴더 후보 1개를 제안한다.\n"
@@ -127,13 +126,14 @@ class handler(BaseHTTPRequestHandler):
         if not api_key:
             return self._send(500, error("UPSTREAM_ERROR", "잠시 후 다시 시도해 주세요."))
 
-        client = Anthropic(api_key=api_key, timeout=TIMEOUT_SEC, max_retries=0)
+        client = Anthropic(
+            api_key=api_key, base_url=BASE_URL, timeout=TIMEOUT_SEC, max_retries=0
+        )
 
         try:
             resp = client.messages.create(
                 model=MODEL_ASSIST,
                 max_tokens=MAX_TOKENS,
-                temperature=cfg["temperature"],
                 system=f"{COMMON}\n\n{cfg['system']}\n\n후보는 {cfg['count']}개 반환한다.",
                 messages=[
                     {"role": "user", "content": build_user_message(mode, query, context)}
