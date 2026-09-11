@@ -78,6 +78,7 @@ python travel_planner.py --date "2026-03-15"
 | `--places N` | 도시당 검색할 맛집 수 (기본 5) |
 | `--refresh` | 캐시를 무시하고 API를 다시 호출 |
 | `--list-models` | 쓸 수 있는 Gemini 모델 목록만 출력하고 종료 |
+| `--check-keys` | 두 키가 실제로 동작하는지 점검하고 종료 |
 
 날짜 형식이 틀리면 사용법을 출력하고 종료합니다.
 
@@ -98,8 +99,36 @@ travel_planner.py: error: argument -date/--date: 날짜 형식이 올바르지 �
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) | Get API key → Create API key |
 | `KAKAO_REST_API_KEY` | [카카오 개발자센터](https://developers.kakao.com) | 내 애플리케이션 → 앱 키 → **REST API 키** |
 
-카카오는 앱을 만든 뒤 **카카오맵** 또는 **로컬** 관련 설정이 활성화되어 있어야 합니다.
-401/403이 나면 키 값, 헤더 이름(`Authorization`), 플랫폼/도메인 설정을 확인하세요.
+키가 제대로 들어갔는지는 아래 명령으로 바로 확인할 수 있습니다.
+
+```bash
+python travel_planner.py --check-keys
+```
+
+```
+[Kakao] REST API 키 점검
+   형태: 32자, 앞 4자 'a1b2…'
+   ✓ 정상 (테스트 검색 1건)
+
+[Gemini] API 키 점검
+   형태: 39자, 앞 4자 'AIza…'
+   ✓ 정상 (쓸 수 있는 모델 12개)
+   ✓ 설정된 모델 'gemini-2.5-flash' 사용 가능
+
+모두 정상입니다. 이제 --date 로 실행하세요.
+```
+
+키 값 자체는 출력하지 않고 길이와 앞 4자만 보여 줍니다.
+
+**자주 막히는 지점**
+
+| 증상 | 원인 |
+| --- | --- |
+| Kakao 401 | `REST API 키`가 아닌 다른 키를 넣었거나 값이 잘림 |
+| Kakao 401 | `KakaoAK ` 접두어까지 같이 복사함 — 키 값만 넣어야 합니다 |
+| Kakao 403 | 앱 설정 → 플랫폼 에 Web 플랫폼 추가 필요 |
+| Gemini 400 | 키가 유효하지 않음 (Gemini는 401이 아니라 400으로 답합니다) |
+| Gemini 404 | 모델명이 안 맞음 — `--list-models` 후 `.env`의 `GEMINI_MODEL` 수정 |
 
 ### 방법 1 — `.env` 파일 (권장)
 

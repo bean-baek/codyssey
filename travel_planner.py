@@ -100,6 +100,20 @@ def parse_args(argv=None):
         action="store_true",
         help="사용 가능한 Gemini 모델 목록만 출력하고 종료한다",
     )
+    parser.add_argument(
+        "--check-keys",
+        action="store_true",
+        help="두 API 키가 실제로 동작하는지 점검하고 종료한다",
+    )
+
+    # --check-keys / --list-models 만 쓸 때는 --date 없이도 돌 수 있게 한다
+    if argv is None:
+        argv = sys.argv[1:]
+    if any(flag in argv for flag in ("--check-keys", "--list-models")):
+        for action in parser._actions:
+            if action.dest == "date":
+                action.required = False
+
     return parser.parse_args(argv)
 
 
@@ -140,6 +154,98 @@ def load_keys():
         "kakao": kakao,
         "model": os.getenv("GEMINI_MODEL", "").strip() or DEFAULT_GEMINI_MODEL,
     }
+
+
+# ---------------------------------------------------------------- 키 점검
+
+
+def describe_key(value):
+    """키 값을 노출하지 않고 형태만 알려 준다."""
+    return f"{len(value)}자, 앞 4자 '{value[:4]}…'"
+
+
+def check_keys(keys):
+    """두 키가 실제로 동작하는지 최소 호출로 확인한다. 모두 정상이면 True."""
+    all_ok = True
+
+    # --- Kakao ---------------------------------------------------------
+    print("[Kakao] REST API 키 점검")
+    kakao = keys["kakao"]
+    print(f"   형태: {describe_key(kakao)}")
+
+    if kakao.lower().startswith("kakaoak"):
+        print("   ✗ 'KakaoAK' 접두어까지 복사했습니다. 키 값만 남기세요.")
+        all_ok = False
+    elif len(kakao) != 32 or not all(c in "0123456789abcdefABCDEF" for c in kakao):
+        print("   ! 카카오 앱 키는 보통 32자리 16진수입니다. 값이 잘렸는지 확인하세요.")
+
+    try:
+        response = requests.get(
+            KAKAO_KEYWORD_ENDPOINT,
+            headers={"Authorization": f"KakaoAK {kakao}"},
+            params={"query": "서울 맛집", "size": 1},
+            timeout=TIMEOUT,
+        )
+        if response.status_code == 200:
+            count = len(response.json().get("documents", []))
+            print(f"   ✓ 정상 (테스트 검색 {count}건)")
+        elif response.status_code == 401:
+            print("   ✗ 401 인증 실패 — 키 값이 틀렸습니다.")
+            print("     앱 설정 → 앱 키 에서 'REST API 키'를 다시 복사하세요.")
+            print("     (네이티브 앱 키 / JavaScript 키 / Admin 키는 여기서 동작하지 않습니다)")
+            all_ok = False
+        elif response.status_code == 403:
+            print("   ✗ 403 권한 없음 — 키는 맞지만 앱 설정이 막고 있습니다.")
+            print("     앱 설정 → 플랫폼 에서 Web 플랫폼을 추가해 보세요.")
+            all_ok = False
+        else:
+            print(f"   ✗ HTTP {response.status_code} — {response.text[:160]}")
+            all_ok = False
+    except requests.RequestException as exc:
+        print(f"   ✗ 네트워크 오류: {exc}")
+        all_ok = False
+
+    # --- Gemini --------------------------------------------------------
+    print("\n[Gemini] API 키 점검")
+    gemini = keys["gemini"]
+    print(f"   형태: {describe_key(gemini)}")
+    if not gemini.startswith("AIza"):
+        print("   ! Google AI Studio 키는 보통 'AIza' 로 시작합니다.")
+
+    try:
+        response = requests.get(
+            GEMINI_MODELS_ENDPOINT,
+            headers={"x-goog-api-key": gemini},
+            timeout=TIMEOUT,
+        )
+        if response.status_code == 200:
+            names = [
+                model.get("name", "").replace("models/", "")
+                for model in response.json().get("models", [])
+                if "generateContent" in model.get("supportedGenerationMethods", [])
+            ]
+            print(f"   ✓ 정상 (쓸 수 있는 모델 {len(names)}개)")
+            if keys["model"] in names:
+                print(f"   ✓ 설정된 모델 '{keys['model']}' 사용 가능")
+            else:
+                print(f"   ✗ 설정된 모델 '{keys['model']}' 을(를) 쓸 수 없습니다.")
+                if names:
+                    print(f"     .env 의 GEMINI_MODEL 을 이 중 하나로 바꾸세요: {', '.join(names[:5])}")
+                all_ok = False
+        elif response.status_code in (400, 401, 403):
+            # 키가 틀리면 Gemini는 401이 아니라 400 INVALID_ARGUMENT 로 답한다
+            print(f"   ✗ {response.status_code} 인증 실패 — 키가 유효하지 않습니다.")
+            print("     https://aistudio.google.com/apikey 에서 다시 발급받으세요.")
+            all_ok = False
+        else:
+            print(f"   ✗ HTTP {response.status_code} — {response.text[:160]}")
+            all_ok = False
+    except requests.RequestException as exc:
+        print(f"   ✗ 네트워크 오류: {exc}")
+        all_ok = False
+
+    print("\n" + ("모두 정상입니다. 이제 --date 로 실행하세요." if all_ok else "위 ✗ 항목을 고친 뒤 다시 점검하세요."))
+    return all_ok
 
 
 # ---------------------------------------------------------------- Gemini (POST)
@@ -535,6 +641,9 @@ def main(argv=None):
     except ConfigError as exc:
         print(f"\n[설정 오류] {exc}\n", file=sys.stderr)
         return 1
+
+    if args.check_keys:
+        return 0 if check_keys(keys) else 1
 
     if args.list_models:
         try:
