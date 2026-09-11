@@ -669,3 +669,13 @@ td { color: var(--ink-2); }
   .statusbar { gap: 10px; font-size: 10px; }
   .section-ide { padding: 12px 0 32px; }
 }
+
+/* 팔레트 번호 — ⌘K 다음 한 자리로 실행한다 */
+.palette-keys kbd.is-num {
+  min-width: 20px; text-align: center;
+  font-size: 11.5px; font-weight: 700; opacity: .85;
+  border-radius: 5px;
+}
+.palette-item.is-active kbd.is-num { opacity: 1; }
+.palette-foot strong { color: var(--ink-2); font-weight: 600; }
+.palette-foot-sep { width: 1px; height: 11px; background: var(--line-2); }

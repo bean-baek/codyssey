@@ -14,8 +14,9 @@ let box;
 let input;
 let list;
 let prefix;
-let items = [];   // 현재 걸러진 명령
+let items = [];       // 현재 걸러진 명령
 let active = 0;
+let filtering = false;  // 검색어를 쳤는가 — 번호 표시 여부를 가른다
 
 /**
  * @param {{id:string, title:string, hint?:string, keys?:string[],
@@ -74,6 +75,7 @@ function refresh() {
   const raw = input.value;
   const query = raw.startsWith('>') ? raw.slice(1).trim() : raw.trim();
   prefix.textContent = '>';
+  filtering = query.length > 0;
 
   items = commands
     .filter((c) => (c.when ? c.when() : true))
@@ -118,16 +120,23 @@ function paint() {
 
     li.append(main);
 
-    if (cmd.keys?.length) {
-      const keys = document.createElement('span');
-      keys.className = 'palette-keys';
+    // 검색어를 치기 전에는 번호를 보여 준다. ⌘K 다음 숫자 한 자리로 끝난다.
+    // 조합키를 여러 개 외우게 하는 것보다 이쪽이 훨씬 쉽다.
+    const keys = document.createElement('span');
+    keys.className = 'palette-keys';
+    if (!filtering && i < 9) {
+      const kbd = document.createElement('kbd');
+      kbd.className = 'is-num';
+      kbd.textContent = String(i + 1);
+      keys.append(kbd);
+    } else if (cmd.keys?.length) {
       cmd.keys.forEach((k) => {
         const kbd = document.createElement('kbd');
         kbd.textContent = k;
         keys.append(kbd);
       });
-      li.append(keys);
     }
+    li.append(keys);
 
     li.addEventListener('mouseenter', () => {
       active = i;
@@ -171,6 +180,11 @@ export function initPalette() {
     } else if (e.key === 'Escape') {
       e.preventDefault();
       close();
+    } else if (!filtering && /^[1-9]$/.test(e.key)) {
+      // 검색어가 없을 때만 숫자를 선택으로 받는다.
+      // 검색 중에 숫자를 막으면 '제안 3개' 같은 걸 못 찾는다.
+      e.preventDefault();
+      execute(Number(e.key) - 1);
     }
   });
 

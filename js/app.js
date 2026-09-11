@@ -37,7 +37,6 @@ register({
   id: 'revise.compare',
   title: '비교 보기 전환',
   hint: '원본과 수정본을 나란히 봅니다',
-  keys: ['⌘', '\\'],
   when: inRevise,
   run: () => toggleCompare(editor.getText()),
 });
@@ -45,7 +44,6 @@ register({
 register({
   id: 'revise.applyAll',
   title: '남은 제안 모두 반영',
-  keys: ['⇧', '⌘', '↵'],
   when: () => inRevise() && editor.pendingCount() > 0,
   run: () => editor.applyRemaining(),
 });
@@ -61,7 +59,6 @@ register({
 register({
   id: 'revise.persona',
   title: '편집 방침 열고 닫기',
-  keys: ['⌘', ','],
   when: inRevise,
   run: () => persona.toggleDrawer(),
 });
@@ -79,7 +76,6 @@ register({
   id: 'assist.synonym',
   title: '유의어 찾기 (선택한 단어)',
   hint: '원고에서 단어를 선택한 뒤 실행하세요',
-  keys: ['⌘', 'K', '?'],
   run: () => {
     const word = editor.selection();
     if (!word) {
@@ -137,21 +133,23 @@ register({
   })
 );
 
-/* ─────────────────────────────────────────── 전역 단축키 */
+/* ─────────────────────────────────────────── 전역 단축키
+
+   외울 것은 두 개뿐이다.
+     ⌘K  — 모든 기능
+     ⌘↵  — 퇴고 요청 (가장 자주 쓰는 하나라서 따로 뒀다)
+
+   나머지는 ⌘K 를 누른 뒤 번호 한 자리로 실행한다.
+   ⌘\ 나 ⌘, 같은 조합은 아무도 외우지 못해 걷어냈다. */
 
 const isMac = navigator.platform.toUpperCase().includes('MAC');
 const mod = (e) => (isMac ? e.metaKey : e.ctrlKey);
 
 addEventListener('keydown', (e) => {
-  // 팔레트 열기 — ⌘K / ⌘⇧P
   if (mod(e) && (e.key === 'k' || e.key === 'K')) {
+    // 크롬은 ⌘K 를 주소창 검색에 쓴다. 막지 않으면 팔레트가 열리지 않는다.
     e.preventDefault();
     paletteOpen() ? closePalette() : openPalette();
-    return;
-  }
-  if (mod(e) && e.shiftKey && (e.key === 'p' || e.key === 'P')) {
-    e.preventDefault();
-    openPalette();
     return;
   }
 
@@ -159,17 +157,6 @@ addEventListener('keydown', (e) => {
 
   if (mod(e) && e.key === 'Enter') {
     e.preventDefault();
-    if (e.shiftKey) editor.applyRemaining();
-    else editor.run();
-    return;
-  }
-  if (mod(e) && e.key === '\\') {
-    e.preventDefault();
-    toggleCompare(editor.getText());
-    return;
-  }
-  if (mod(e) && e.key === ',') {
-    e.preventDefault();
-    persona.toggleDrawer();
+    editor.run();
   }
 });
