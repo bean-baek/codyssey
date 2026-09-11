@@ -31,7 +31,8 @@ export function initEditor(getPersona) {
 
   function updateCounter() {
     const n = input.value.length;
-    counter.textContent = `${n.toLocaleString()}자`;
+    // 상한을 늘 함께 보여 준다. 넘고 나서 알려 주면 이미 늦다.
+    counter.textContent = `${n.toLocaleString()} / ${MAX_TEXT.toLocaleString()}자`;
     counter.classList.toggle('over', n > MAX_TEXT);
   }
 
@@ -47,7 +48,13 @@ export function initEditor(getPersona) {
 
   function setBusy(busy) {
     runBtn.disabled = busy;
-    runBtn.textContent = busy ? '퇴고 중…' : '퇴고 요청';
+    if (busy) {
+      runBtn.textContent = '읽는 중…';
+      results.innerHTML =
+        '<p class="empty">문장을 하나씩 읽고 있습니다.<br>길이에 따라 10초 안팎 걸립니다.</p>';
+    } else {
+      runBtn.innerHTML = '퇴고 <kbd>⌘</kbd><kbd>↵</kbd>';
+    }
   }
 
   async function run() {

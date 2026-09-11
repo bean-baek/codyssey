@@ -41,4 +41,8 @@ export function initNav(onChange) {
   });
 
   show(sectionFromHash());
+
+  // 첫 로드에 #revise 같은 해시가 있으면 브라우저가 그 id로 스크롤해
+  // 고정 상단바가 제목을 덮는다. 섹션 전환식이라 스크롤 자체가 필요 없다.
+  if (location.hash) requestAnimationFrame(() => scrollTo({ top: 0, behavior: 'instant' }));
 }

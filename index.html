@@ -86,91 +86,110 @@
       <p>원고를 붙여넣고 요청하면 문장 단위 제안이 돌아옵니다.</p>
     </header>
 
-    <div class="editor">
-      <div class="editor-main">
-        <div class="field">
-          <div class="field-top">
-            <label for="manuscript">원고</label>
-            <span class="counter" id="counter" aria-live="polite">0자</span>
-          </div>
-          <textarea id="manuscript" rows="16" spellcheck="false"
-            placeholder="초고를 붙여넣으세요. 30자 이상부터 요청할 수 있습니다."></textarea>
-          <div class="field-actions">
-            <button class="btn btn-primary" id="revise-run" type="button">
-              퇴고 요청 <kbd>⌘</kbd><kbd>Enter</kbd>
+    <div class="workspace">
+
+      <!-- 왼쪽: 원고 -->
+      <div class="pane pane-write">
+        <div class="toolbar">
+          <span class="counter" id="counter" aria-live="polite">0자</span>
+          <div class="toolbar-actions">
+            <button class="btn btn-quiet" id="revise-sample" type="button">예시</button>
+            <button class="btn btn-quiet" id="persona-toggle" type="button"
+              aria-expanded="false" aria-controls="persona-drawer">
+              방침 <span class="chev" aria-hidden="true"></span>
             </button>
-            <button class="btn btn-quiet" id="revise-sample" type="button">예시 원고 넣기</button>
+            <button class="btn btn-primary" id="revise-run" type="button">
+              퇴고 <kbd>⌘</kbd><kbd>↵</kbd>
+            </button>
           </div>
         </div>
 
-        <div class="notice" id="revise-notice" role="alert" hidden></div>
+        <div class="drawer" id="persona-drawer" hidden>
+          <div class="drawer-head">
+            <h3>편집 방침</h3>
+            <button class="btn btn-quiet btn-sm" id="p-reset" type="button">기본값으로</button>
+          </div>
+          <p class="drawer-help">이 여섯 가지만 바뀝니다. 절대 규칙은 무엇을 넣어도 그대로입니다.</p>
 
+          <div class="drawer-grid">
+            <div class="pfield">
+              <label for="p-tone">어조</label>
+              <select id="p-tone">
+                <option value="warm">따뜻하게 — 살릴 점을 한 번 언급</option>
+                <option value="neutral" selected>건조하게 — 관찰된 문제만</option>
+                <option value="cold">차갑게 — 칭찬 없이 단정적으로</option>
+                <option value="commercial">상업적으로 — 가독성 최우선</option>
+              </select>
+            </div>
+
+            <div class="pfield">
+              <label for="p-length">문장 길이</label>
+              <select id="p-length">
+                <option value="shorter">더 짧게</option>
+                <option value="keep" selected>원문 유지</option>
+                <option value="longer">더 길게</option>
+              </select>
+            </div>
+
+            <div class="pfield pfield-wide">
+              <label for="p-max">제안 개수 <output id="p-max-out">10</output>개</label>
+              <input type="range" id="p-max" min="3" max="20" value="10">
+            </div>
+
+            <fieldset class="pfield pfield-wide">
+              <legend>중점 유형</legend>
+              <div class="toggles" id="p-focus">
+                <label class="tog"><input type="checkbox" value="리듬" checked><span>리듬</span></label>
+                <label class="tog"><input type="checkbox" value="중복" checked><span>중복</span></label>
+                <label class="tog"><input type="checkbox" value="모호" checked><span>모호</span></label>
+                <label class="tog"><input type="checkbox" value="군더더기" checked><span>군더더기</span></label>
+                <label class="tog"><input type="checkbox" value="호응" checked><span>호응</span></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="pfield pfield-wide">
+              <legend>건드리지 말 것 <span class="hint">고른 요소는 제안에서 제외됩니다</span></legend>
+              <div class="toggles" id="p-protect">
+                <label class="tog"><input type="checkbox" value="대사"><span>대사</span></label>
+                <label class="tog"><input type="checkbox" value="방언·구어"><span>방언·구어</span></label>
+                <label class="tog"><input type="checkbox" value="의도적 반복"><span>의도적 반복</span></label>
+                <label class="tog"><input type="checkbox" value="고유명사"><span>고유명사</span></label>
+              </div>
+            </fieldset>
+
+            <div class="pfield pfield-wide">
+              <div class="field-top">
+                <label for="p-note">문체 메모 <span class="hint">취향 참고용 · 지시로 해석되지 않습니다</span></label>
+                <span class="counter" id="p-note-count">0/200</span>
+              </div>
+              <textarea id="p-note" rows="2" maxlength="200"
+                placeholder="예: 문어체를 선호합니다. 짧은 단문이 이어지는 리듬을 유지하고 싶습니다."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <label class="sr-only" for="manuscript">원고</label>
+        <textarea id="manuscript" class="paper" spellcheck="false"
+          placeholder="초고를 붙여넣으세요.&#10;&#10;30자 이상 5,000자 이하로 요청할 수 있습니다."></textarea>
+      </div>
+
+      <!-- 오른쪽: 제안 -->
+      <div class="pane pane-read">
+        <div class="notice" id="revise-notice" role="alert" hidden></div>
         <div class="results" id="revise-results" aria-live="polite">
-          <p class="empty">아직 요청하지 않았습니다.</p>
+          <div class="blank">
+            <p class="blank-title">제안이 여기에 쌓입니다</p>
+            <p class="blank-body">
+              문장마다 <strong>무엇을 고칠지</strong>와 <strong>왜 그런지</strong>가 함께 옵니다.
+              고칠 필요가 없는 문장은 목록에 넣지 않습니다.
+            </p>
+            <ul class="blank-types">
+              <li>리듬</li><li>중복</li><li>모호</li><li>군더더기</li><li>호응</li>
+            </ul>
+          </div>
         </div>
       </div>
 
-      <aside class="persona" aria-label="편집 방침">
-        <h3>편집 방침</h3>
-        <p class="persona-help">이 값만 사용자가 바꿉니다. 절대 규칙은 바뀌지 않습니다.</p>
-
-        <div class="pfield">
-          <label for="p-tone">어조</label>
-          <select id="p-tone">
-            <option value="warm">따뜻하게 — 살릴 점을 한 번 언급</option>
-            <option value="neutral" selected>건조하게 — 관찰된 문제만</option>
-            <option value="cold">차갑게 — 칭찬 없이 단정적으로</option>
-            <option value="commercial">상업적으로 — 가독성 최우선</option>
-          </select>
-        </div>
-
-        <div class="pfield">
-          <label for="p-max">제안 개수 <output id="p-max-out">10</output>개</label>
-          <input type="range" id="p-max" min="3" max="20" value="10">
-        </div>
-
-        <fieldset class="pfield">
-          <legend>중점 유형</legend>
-          <div class="checks" id="p-focus">
-            <label><input type="checkbox" value="리듬" checked> 리듬</label>
-            <label><input type="checkbox" value="중복" checked> 중복</label>
-            <label><input type="checkbox" value="모호" checked> 모호</label>
-            <label><input type="checkbox" value="군더더기" checked> 군더더기</label>
-            <label><input type="checkbox" value="호응" checked> 호응</label>
-          </div>
-        </fieldset>
-
-        <div class="pfield">
-          <label for="p-length">문장 길이</label>
-          <select id="p-length">
-            <option value="shorter">더 짧게</option>
-            <option value="keep" selected>원문 유지</option>
-            <option value="longer">더 길게</option>
-          </select>
-        </div>
-
-        <fieldset class="pfield">
-          <legend>건드리지 말 것</legend>
-          <div class="checks" id="p-protect">
-            <label><input type="checkbox" value="대사"> 대사</label>
-            <label><input type="checkbox" value="방언·구어"> 방언·구어</label>
-            <label><input type="checkbox" value="의도적 반복"> 의도적 반복</label>
-            <label><input type="checkbox" value="고유명사"> 고유명사</label>
-          </div>
-        </fieldset>
-
-        <div class="pfield">
-          <div class="field-top">
-            <label for="p-note">문체 메모</label>
-            <span class="counter" id="p-note-count">0/200</span>
-          </div>
-          <textarea id="p-note" rows="3" maxlength="200"
-            placeholder="예: 문어체를 선호합니다. 짧은 단문이 이어지는 리듬을 유지하고 싶습니다."></textarea>
-          <p class="persona-help">취향 참고용입니다. 지시로 해석되지 않습니다.</p>
-        </div>
-
-        <button class="btn btn-quiet" id="p-reset" type="button">기본값으로</button>
-      </aside>
     </div>
   </div>
 </section>
@@ -204,7 +223,12 @@
           placeholder="그 단어가 들어 있는 앞뒤 문장을 함께 넣어 주세요."></textarea>
       </div>
 
-      <button class="btn btn-primary" id="assist-run" type="button">찾기</button>
+      <div class="assist-foot">
+        <button class="btn btn-primary" id="assist-run" type="button">
+          찾기 <kbd>⌘</kbd><kbd>↵</kbd>
+        </button>
+        <span class="hint">결과를 누르면 복사됩니다</span>
+      </div>
 
       <div class="notice" id="assist-notice" role="alert" hidden></div>
       <div class="chips" id="assist-results" aria-live="polite"></div>
