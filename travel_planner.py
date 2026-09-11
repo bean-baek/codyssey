@@ -140,3 +140,172 @@ def load_keys():
         "kakao": kakao,
         "model": os.getenv("GEMINI_MODEL", "").strip() or DEFAULT_GEMINI_MODEL,
     }
+
+
+# ---------------------------------------------------------------- Gemini (POST)
+
+
+def call_gemini(keys, prompt, as_json=False):
+    """Gemini에 POST로 프롬프트를 보내고 생성된 텍스트를 돌려준다.
+
+    REST 관점에서 볼 것:
+      - 메서드는 POST. 보낼 내용이 길고 구조가 있어서 URL이 아니라 '본문(body)'에 싣는다.
+      - 인증은 x-goog-api-key 헤더. 키를 URL에 붙이면 로그에 남기 쉬워서 헤더를 쓴다.
+      - as_json=True면 응답을 JSON 문자열로만 내놓도록 모델에 강제한다.
+    """
+    url = GEMINI_ENDPOINT.format(model=keys["model"])
+    headers = {
+        "x-goog-api-key": keys["gemini"],
+        "Content-Type": "application/json",
+    }
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.7},
+    }
+    if as_json:
+        body["generationConfig"]["responseMimeType"] = "application/json"
+
+    response = requests.post(url, headers=headers, json=body, timeout=TIMEOUT)
+
+    if response.status_code == 401 or response.status_code == 403:
+        raise RuntimeError(f"인증 실패(HTTP {response.status_code}). GEMINI_API_KEY를 확인하세요.")
+    if response.status_code == 429:
+        raise RuntimeError("요청 한도 초과(HTTP 429). 잠시 후 다시 시도하세요.")
+    if response.status_code == 404:
+        raise RuntimeError(
+            f"모델을 찾을 수 없습니다(HTTP 404): {keys['model']}\n"
+            "  --list-models 로 사용 가능한 모델을 확인한 뒤 .env의 GEMINI_MODEL을 바꾸세요."
+        )
+    response.raise_for_status()
+
+    payload = response.json()
+    candidates = payload.get("candidates", [])
+    if not candidates:
+        raise RuntimeError(f"응답에 생성 결과가 없습니다: {json.dumps(payload)[:200]}")
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+    text = "".join(part.get("text", "") for part in parts).strip()
+    if not text:
+        raise RuntimeError("응답 텍스트가 비어 있습니다.")
+    return text
+
+
+def list_models(keys):
+    """사용 가능한 모델을 GET으로 조회해 출력한다. (POST와 대비되는 예)"""
+    response = requests.get(
+        GEMINI_MODELS_ENDPOINT,
+        headers={"x-goog-api-key": keys["gemini"]},
+        timeout=TIMEOUT,
+    )
+    response.raise_for_status()
+
+    print("generateContent 를 지원하는 모델:")
+    for model in response.json().get("models", []):
+        if "generateContent" in model.get("supportedGenerationMethods", []):
+            print("  -", model.get("name", "").replace("models/", ""))
+
+
+def extract_json(text):
+    """모델이 ```json 울타리를 씌워 보내도 벗겨 내고 dict로 만든다."""
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1]
+        if cleaned.rstrip().endswith("```"):
+            cleaned = cleaned.rstrip()[: -len("```")]
+    cleaned = cleaned.strip()
+
+    # 앞뒤에 설명이 붙어 있으면 가장 바깥 중괄호만 잘라 본다
+    if not cleaned.startswith("{"):
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start == -1 or end == -1:
+            raise ValueError("JSON을 찾지 못했습니다.")
+        cleaned = cleaned[start : end + 1]
+
+    return json.loads(cleaned)
+
+
+# ---------------------------------------------------------------- 1차 추천
+
+
+REQUIRED_KEYS = {
+    "recommended_city": str,
+    "weather": str,
+    "events": list,
+    "reason": str,
+}
+
+
+def build_recommend_prompt(date, city_count, retry=False):
+    """1차 추천용 프롬프트. retry=True면 형식만 다시 강조한다."""
+    if retry:
+        return (
+            "아래 키를 가진 JSON 객체 하나만 출력하세요. 설명, 인사말, 코드블록 표시를 붙이지 마세요.\n"
+            '{"recommended_city": "도시명", "weather": "날씨 요약", '
+            '"events": ["행사1", "행사2"], "reason": "추천 이유"}\n'
+            f"기준 날짜: {date.isoformat()} (대한민국 국내 여행)"
+        )
+
+    extra = ""
+    if city_count > 1:
+        extra = (
+            f'\n- "recommended_cities": 추천 도시 {city_count}개를 문자열 배열로. '
+            '첫 번째는 "recommended_city"와 같아야 합니다.'
+        )
+
+    return (
+        f"당신은 대한민국 국내 여행 플래너입니다.\n"
+        f"{date.isoformat()}에 떠나는 국내 여행지를 추천해 주세요.\n\n"
+        "아래 키를 가진 JSON 객체 하나만 출력하세요.\n"
+        '- "recommended_city": 도시/지역 이름 한 개 (예: "제주", "강릉")\n'
+        '- "weather": 그 시기 일반적인 날씨 요약 한두 문장\n'
+        '- "events": 그 시기 행사/축제 후보 1~3개를 담은 문자열 배열\n'
+        '- "reason": 추천 근거 2~4문장'
+        f"{extra}\n\n"
+        "주의사항\n"
+        "- 실제 개최가 확정되지 않은 행사는 '(일정 변동 가능)'처럼 단서를 달아 주세요.\n"
+        "- JSON 외의 텍스트는 절대 출력하지 마세요."
+    )
+
+
+def validate_recommendation(data):
+    """필수 키와 타입을 확인한다. 문제가 있으면 사유 문자열, 없으면 None."""
+    if not isinstance(data, dict):
+        return "최상위가 객체가 아닙니다."
+    for key, expected in REQUIRED_KEYS.items():
+        if key not in data:
+            return f"필수 키 누락: {key}"
+        if not isinstance(data[key], expected):
+            return f"타입 불일치: {key} (기대 {expected.__name__})"
+    if not data["recommended_city"].strip():
+        return "recommended_city 가 비어 있습니다."
+    return None
+
+
+def get_recommendation(keys, date, city_count, errors):
+    """1차 추천 JSON을 받아 온다. 파싱/검증 실패 시 재시도는 최대 1회."""
+    for attempt in (1, 2):
+        prompt = build_recommend_prompt(date, city_count, retry=(attempt == 2))
+        try:
+            raw = call_gemini(keys, prompt, as_json=True)
+            data = extract_json(raw)
+        except (ValueError, json.JSONDecodeError) as exc:
+            add_error(errors, "llm_recommend", "PARSE_ERROR", f"{attempt}차 파싱 실패: {exc}")
+            if attempt == 2:
+                raise RuntimeError("1차 추천 JSON 파싱에 두 번 실패했습니다.") from exc
+            log("   ", "JSON 파싱 실패 — 형식을 강조해 1회 재요청합니다.")
+            continue
+        except requests.RequestException as exc:
+            add_error(errors, "llm_recommend", "NETWORK_ERROR", exc)
+            raise RuntimeError(f"Gemini 요청 실패: {exc}") from exc
+
+        problem = validate_recommendation(data)
+        if problem is None:
+            return data
+
+        add_error(errors, "llm_recommend", "SCHEMA_ERROR", f"{attempt}차 검증 실패: {problem}")
+        if attempt == 2:
+            raise RuntimeError(f"1차 추천 JSON 검증에 두 번 실패했습니다: {problem}")
+        log("   ", f"응답 형식 문제({problem}) — 1회 재요청합니다.")
+
+    raise RuntimeError("1차 추천을 받지 못했습니다.")
