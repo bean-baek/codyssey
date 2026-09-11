@@ -1,0 +1,16 @@
+# API 키 — 절대 커밋하지 않는다
+.env
+.env.local
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 에디터 / OS
+.vscode/
+.idea/
+.DS_Store
+.claude/
