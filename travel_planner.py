@@ -384,3 +384,224 @@ def to_float(value):
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+# ---------------------------------------------------------------- 최종 리포트
+
+
+def build_report_prompt(date, recommendation, places_by_city):
+    """1차 추천과 맛집 목록을 함께 넘겨 Markdown 리포트를 요청한다."""
+    return (
+        f"당신은 여행 리포트를 쓰는 편집자입니다.\n"
+        f"아래 두 자료만 근거로 {date.isoformat()} 국내 여행 리포트를 Markdown으로 작성하세요.\n\n"
+        "[1차 추천 자료]\n"
+        f"{json.dumps(recommendation, ensure_ascii=False, indent=2)}\n\n"
+        "[맛집 검색 결과]\n"
+        f"{json.dumps(places_by_city, ensure_ascii=False, indent=2)}\n\n"
+        "작성 규칙\n"
+        f"1. 첫 줄은 '# {date.isoformat()} 국내 여행 추천 리포트' 로 시작합니다.\n"
+        "2. 다음 `##` 섹션을 이 순서로 모두 넣습니다: "
+        "추천 지역 / 추천 이유 / 날씨 요약 / 행사·축제 / 맛집 추천 / 1일 일정 제안\n"
+        "3. 맛집은 도시별로 묶고 이름·주소·카테고리를 적습니다. "
+        "url이 있으면 이름에 링크를 겁니다.\n"
+        "4. 맛집 목록이 비어 있는 도시는 '- 데이터 없음 (장소 검색 결과 0건)' 이라고만 적습니다.\n"
+        "5. 1일 일정은 오전/오후/저녁 세 덩어리로 제안합니다.\n"
+        "6. 위 자료에 없는 가게 이름, 주소, 전화번호를 지어내지 마세요.\n"
+        "7. Markdown 본문만 출력하고 코드블록으로 감싸지 마세요."
+    )
+
+
+def generate_report(keys, date, recommendation, places_by_city, errors):
+    """LLM으로 리포트를 만든다. 실패하면 로컬에서 조립한 리포트로 대체한다."""
+    prompt = build_report_prompt(date, recommendation, places_by_city)
+    try:
+        text = call_gemini(keys, prompt)
+    except (requests.RequestException, RuntimeError) as exc:
+        add_error(errors, "llm_report", "GENERATION_ERROR", exc)
+        log("   ", f"오류: 리포트 생성 실패 ({exc}) — 수집한 자료로 직접 작성합니다.")
+        return fallback_report(date, recommendation, places_by_city), True
+
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1]
+        if text.rstrip().endswith("```"):
+            text = text.rstrip()[: -len("```")]
+    return text.strip(), False
+
+
+def fallback_report(date, recommendation, places_by_city):
+    """LLM 없이 수집한 자료만으로 만드는 대체 리포트."""
+    lines = [f"# {date.isoformat()} 국내 여행 추천 리포트", ""]
+    lines += ["## 추천 지역", "", f"- {', '.join(places_by_city.keys())}", ""]
+    lines += ["## 추천 이유", "", recommendation.get("reason", "(없음)"), ""]
+    lines += ["## 날씨 요약", "", recommendation.get("weather", "(없음)"), ""]
+
+    lines += ["## 행사·축제", ""]
+    events = recommendation.get("events") or []
+    lines += [f"- {event}" for event in events] if events else ["- 데이터 없음"]
+    lines.append("")
+
+    lines += ["## 맛집 추천", ""]
+    for city, places in places_by_city.items():
+        lines += [f"### {city}", ""]
+        if not places:
+            lines += ["- 데이터 없음 (장소 검색 결과 0건)", ""]
+            continue
+        for place in places:
+            name = f"[{place['name']}]({place['url']})" if place["url"] else place["name"]
+            lines.append(f"- {name} — {place['address']} ({place['category']})")
+        lines.append("")
+
+    lines += [
+        "## 1일 일정 제안",
+        "",
+        "- 오전: 숙소 주변 산책 후 대표 명소 한 곳",
+        "- 오후: 행사/축제 일정 확인 후 참여, 이동은 여유 있게",
+        "- 저녁: 위 맛집 목록에서 한 곳 방문",
+        "",
+        "> 이 리포트는 LLM 호출 실패로 수집한 자료만 사용해 자동 작성되었습니다.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def append_errors_section(report, errors):
+    """리포트 끝에 오류 요약 섹션을 붙인다. 비어 있어도 섹션은 남긴다."""
+    lines = [report.rstrip(), "", "## 오류 요약(errors)", ""]
+    if not errors:
+        lines.append("- 없음")
+    else:
+        for error in errors:
+            lines.append(f"- `{error['step']}` / `{error['type']}` — {error['message']}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------- 저장 / 캐시
+
+
+def result_paths(date):
+    """날짜 기준 결과 파일 두 개의 경로를 만든다."""
+    stamp = date.isoformat()
+    return (
+        os.path.join(RESULTS_DIR, f"{stamp}_raw.json"),
+        os.path.join(RESULTS_DIR, f"{stamp}_travel_plan.md"),
+    )
+
+
+def load_cache(json_path):
+    """같은 날짜의 원본 JSON이 있으면 읽어 온다. (보너스: 캐싱)"""
+    if not os.path.exists(json_path):
+        return None
+    try:
+        with open(json_path, "r", encoding="utf-8") as file:
+            cached = json.load(file)
+    except (OSError, ValueError):
+        return None
+    if "recommendation" in cached and "places_by_city" in cached:
+        return cached
+    return None
+
+
+def save_results(json_path, md_path, payload, report):
+    """원본 JSON과 리포트 Markdown을 저장한다."""
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    with open(json_path, "w", encoding="utf-8") as file:
+        json.dump(payload, file, ensure_ascii=False, indent=2)
+    with open(md_path, "w", encoding="utf-8") as file:
+        file.write(report)
+
+
+# ---------------------------------------------------------------- 진행 흐름
+
+
+def pick_cities(recommendation, city_count):
+    """추천 도시 목록을 정한다. (보너스: 복수 지역)"""
+    cities = [recommendation["recommended_city"].strip()]
+
+    if city_count > 1:
+        for city in recommendation.get("recommended_cities") or []:
+            name = str(city).strip()
+            if name and name not in cities:
+                cities.append(name)
+    return cities[:city_count]
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    errors = []
+
+    try:
+        keys = load_keys()
+    except ConfigError as exc:
+        print(f"\n[설정 오류] {exc}\n", file=sys.stderr)
+        return 1
+
+    if args.list_models:
+        try:
+            list_models(keys)
+        except requests.RequestException as exc:
+            print(f"[오류] 모델 목록 조회 실패: {exc}", file=sys.stderr)
+            return 1
+        return 0
+
+    json_path, md_path = result_paths(args.date)
+
+    cached = None if args.refresh else load_cache(json_path)
+    if cached:
+        log("[캐시]", f"{json_path} 를 재사용합니다. (다시 호출하려면 --refresh)")
+        recommendation = cached["recommendation"]
+        places_by_city = cached["places_by_city"]
+        errors = list(cached.get("errors", []))
+    else:
+        log("[1/3]", "1차 추천 생성 중(LLM)...")
+        try:
+            recommendation = get_recommendation(keys, args.date, args.cities, errors)
+        except RuntimeError as exc:
+            print(f"\n[오류] {exc}", file=sys.stderr)
+            print("      추천 없이는 이후 단계를 진행할 수 없어 종료합니다.", file=sys.stderr)
+            return 1
+        log("     ", f"- recommended_city: \"{recommendation['recommended_city']}\"")
+
+        cities = pick_cities(recommendation, args.cities)
+        if len(cities) > 1:
+            log("     ", f"- 추가 추천 도시: {', '.join(cities[1:])}")
+
+        log("[2/3]", "맛집 검색 중(지도/장소 API)...")
+        places_by_city = {}
+        for city in cities:
+            places = search_restaurants(keys, city, args.places, errors)
+            places_by_city[city] = places
+            if places:
+                log("     ", f"- {city}: 맛집 {len(places)}곳 검색 완료")
+
+    log("[3/3]", "최종 리포트 생성 중(LLM)...")
+    report, used_fallback = generate_report(
+        keys, args.date, recommendation, places_by_city, errors
+    )
+    report = append_errors_section(report, errors)
+    log("     ", "- 리포트 생성 완료" + (" (대체 리포트)" if used_fallback else ""))
+
+    payload = {
+        "date": args.date.isoformat(),
+        "generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
+        "recommendation": recommendation,
+        "places_by_city": places_by_city,
+        "errors": errors,
+    }
+
+    try:
+        save_results(json_path, md_path, payload, report)
+    except OSError as exc:
+        print(f"\n[오류] 결과 저장 실패: {exc}", file=sys.stderr)
+        return 1
+
+    print()
+    print(f"완료! {md_path} 를 확인하세요.")
+    print(f"      원본 데이터는 {json_path} 에 있습니다.")
+    if errors:
+        print(f"      처리 중 {len(errors)}건의 오류가 있었습니다. 리포트의 '오류 요약' 섹션을 보세요.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
