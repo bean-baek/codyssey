@@ -197,8 +197,11 @@ def sanitize(raw_items, sentences, limit):
         if revised == original:
             continue
 
-        # 문장 분할 시도 차단
-        if sum(revised.count(c) for c in ".!?…") > 1:
+        # 문장 분할 시도 차단.
+        # 줄임표(…)는 세지 않는다. 한국어에서 '그래서…… 갔다.'처럼 문장 중간의 쉼으로 쓰이고,
+        # 관용적으로 두 개를 겹쳐 쓰므로(……) 종결 부호로 세면 그런 문장은
+        # 제안이 전부 폐기되어 영영 손을 못 대게 된다.
+        if sum(revised.count(c) for c in ".!?") > 1:
             continue
         # 내용 추가 차단
         if len(revised) > len(original) * 3:
