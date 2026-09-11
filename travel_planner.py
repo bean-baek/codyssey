@@ -61,21 +61,35 @@ def api_message(response):
         return response.text[:200]
 
 
-def retry_after_seconds(response):
-    """429 응답이 알려 주는 '몇 초 뒤에 다시 오라'를 초 단위로 꺼낸다."""
+def quota_details(response):
+    """429 응답에서 (일일한도인가, 몇 초 뒤 재시도, 한도값)을 꺼낸다.
+
+    구글은 일일 한도로 막혔을 때도 retryDelay에 수십 초를 적어 보낸다.
+    그 말을 믿고 기다려 봐야 소용없으므로, quotaId로 일일/분당을 구분한다.
+    """
+    per_day, wait, limit = False, None, None
     try:
         details = response.json().get("error", {}).get("details", [])
     except ValueError:
         details = []
 
     for detail in details:
-        if detail.get("@type", "").endswith("RetryInfo"):
+        kind = detail.get("@type", "")
+        if kind.endswith("QuotaFailure"):
+            for violation in detail.get("violations", []):
+                if "PerDay" in violation.get("quotaId", ""):
+                    per_day = True
+                    limit = violation.get("quotaValue")
+        elif kind.endswith("RetryInfo"):
             match = re.search(r"([\d.]+)s", str(detail.get("retryDelay", "")))
             if match:
-                return float(match.group(1))
+                wait = float(match.group(1))
 
-    match = re.search(r"retry in ([\d.]+)s", api_message(response))
-    return float(match.group(1)) if match else None
+    if wait is None:
+        match = re.search(r"retry in ([\d.]+)s", api_message(response))
+        wait = float(match.group(1)) if match else None
+
+    return per_day, wait, limit
 
 
 # ---------------------------------------------------------------- CLI
@@ -320,15 +334,26 @@ def call_gemini(keys, prompt, as_json=False, busy_retry=True):
             f"  API 응답: {api_message(response)}"
         )
     if response.status_code == 429:
-        # 무료 한도는 분당으로 걸린다. 응답이 몇 초 뒤에 다시 오라고 알려 준다.
-        wait = retry_after_seconds(response)
+        per_day, wait, limit = quota_details(response)
+
+        if per_day:
+            # 하루치를 다 쓴 것이라 기다려도 오늘은 풀리지 않는다
+            raise RuntimeError(
+                f"오늘 사용량을 모두 썼습니다(HTTP 429): {keys['model']}"
+                + (f" — 무료 한도 하루 {limit}건" if limit else "")
+                + "\n  무료 한도는 모델마다 따로 계산됩니다.\n"
+                "  .env의 GEMINI_MODEL을 다른 모델로 바꾸면 오늘 더 쓸 수 있습니다.\n"
+                "  (--list-models 로 목록 확인)"
+            )
+
         if busy_retry and wait is not None and wait <= MAX_RETRY_WAIT:
             log("   ", f"분당 요청 한도 초과(429) — {wait:.0f}초 뒤 1회 재시도합니다.")
             time.sleep(wait + 1)
             return call_gemini(keys, prompt, as_json=as_json, busy_retry=False)
+
         raise RuntimeError(
             f"요청 한도 초과(HTTP 429). {api_message(response).splitlines()[0][:160]}\n"
-            "  무료 한도는 분당으로 걸립니다. 1분 뒤 다시 실행해 보세요."
+            "  잠시 후 다시 실행해 보세요."
         )
     if response.status_code == 503:
         # 서버가 붐비는 일시적 상태다. 딱 한 번만 쉬었다 다시 보낸다.
