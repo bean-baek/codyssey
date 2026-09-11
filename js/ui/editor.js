@@ -48,13 +48,8 @@ export function initEditor(getPersona) {
 
   function setBusy(busy) {
     runBtn.disabled = busy;
-    if (busy) {
-      runBtn.textContent = '읽는 중…';
-      results.innerHTML =
-        '<p class="empty">문장을 하나씩 읽고 있습니다.<br>길이에 따라 10초 안팎 걸립니다.</p>';
-    } else {
-      runBtn.innerHTML = '퇴고 <kbd>⌘</kbd><kbd>↵</kbd>';
-    }
+    if (busy) runBtn.textContent = '읽는 중…';
+    else runBtn.innerHTML = '퇴고 <kbd>⌘</kbd><kbd>↵</kbd>';
   }
 
   async function run() {
@@ -62,6 +57,12 @@ export function initEditor(getPersona) {
 
     const text = input.value.trim();
     sentences = splitSentences(text);
+
+    // 실패하면 되돌려 놓는다. 진행 중 문구가 남아 있으면 오류를 띄워 놓고도
+    // 옆에서는 계속 불러오는 중처럼 보인다.
+    const previous = results.innerHTML;
+    results.innerHTML =
+      '<p class="empty">문장을 하나씩 읽고 있습니다.<br>길이에 따라 10초 안팎 걸립니다.</p>';
 
     setBusy(true);
     try {
@@ -72,9 +73,10 @@ export function initEditor(getPersona) {
       });
       render(suggestions);
     } catch (err) {
+      results.innerHTML = previous;
       if (err instanceof AIError) showNotice(err.message);
       else showNotice('알 수 없는 오류가 발생했습니다. 다시 시도해 주세요.');
-      // 원고와 기존 결과는 건드리지 않는다
+      // 원고는 어떤 경우에도 건드리지 않는다
     } finally {
       setBusy(false);
     }
