@@ -112,8 +112,8 @@ python travel_planner.py --check-keys
 
 [Gemini] API 키 점검
    형태: 39자, 앞 4자 'AIza…'
-   ✓ 정상 (쓸 수 있는 모델 12개)
-   ✓ 설정된 모델 'gemini-2.5-flash' 사용 가능
+   ✓ 키 정상 (목록에 모델 40개)
+   ✓ 모델 'gemini-3.6-flash' 로 생성 성공
 
 모두 정상입니다. 이제 --date 로 실행하세요.
 ```
@@ -128,7 +128,12 @@ python travel_planner.py --check-keys
 | Kakao 401 | `KakaoAK ` 접두어까지 같이 복사함 — 키 값만 넣어야 합니다 |
 | Kakao 403 | 앱 설정 → 플랫폼 에 Web 플랫폼 추가 필요 |
 | Gemini 400 | 키가 유효하지 않음 (Gemini는 401이 아니라 400으로 답합니다) |
-| Gemini 404 | 모델명이 안 맞음 — `--list-models` 후 `.env`의 `GEMINI_MODEL` 수정 |
+| Gemini 404 | 모델이 단종됨 — 응답 메시지가 대체 모델 이름을 알려 줍니다 |
+| Gemini 503 | 일시적 혼잡 — 5초 뒤 자동으로 1회 재시도합니다 |
+
+> **모델 목록에 있다고 다 쓸 수 있는 건 아닙니다.**
+> 단종된 모델은 `--list-models` 에는 계속 보이지만 실제 생성 요청에서 404가 납니다.
+> 그래서 `--check-keys` 는 목록만 보지 않고 실제로 한 번 생성해 봅니다.
 
 ### 방법 1 — `.env` 파일 (권장)
 
@@ -141,7 +146,7 @@ cp .env.example .env
 ```
 GEMINI_API_KEY=발급받은_키
 KAKAO_REST_API_KEY=발급받은_키
-GEMINI_MODEL=            # 비워 두면 gemini-2.5-flash
+GEMINI_MODEL=            # 비워 두면 gemini-3.6-flash
 ```
 
 `.env` 는 `.gitignore` 맨 위에 등록되어 있어 **커밋되지 않습니다.**
@@ -276,6 +281,7 @@ cat results/2026-03-15_travel_plan.md
 | LLM JSON 파싱/검증 실패 | 형식만 강조한 프롬프트로 **1회만** 재요청 | `PARSE_ERROR` / `SCHEMA_ERROR` |
 | 재요청도 실패 | 추천 없이는 진행 불가하므로 종료 | 위와 같음 |
 | 리포트 생성 실패 | 수집한 자료로 **대체 리포트**를 직접 작성 | `GENERATION_ERROR` |
+| LLM 서버 혼잡 (503) | 5초 뒤 **1회** 자동 재시도 | (성공하면 남지 않음) |
 
 무한 재시도는 하지 않습니다. LLM 재요청은 **최대 1회**로 못 박혀 있습니다.
 
@@ -301,3 +307,8 @@ cat results/2026-03-15_travel_plan.md
 - Python 3.12.4 (3.10 이상 필요)
 - requests 2.34
 - python-dotenv 1.x
+- Gemini 모델: `gemini-3.6-flash` (기본값, `.env`의 `GEMINI_MODEL`로 변경 가능)
+
+타임아웃은 호출 성격에 따라 다르게 잡았습니다.
+장소 검색·모델 목록은 30초, 리포트 생성은 120초입니다.
+도시 3개짜리 리포트는 30초로는 모자라 실제로 타임아웃이 났습니다.

@@ -15,6 +15,7 @@ import datetime
 import json
 import os
 import sys
+import time
 
 import requests
 from dotenv import load_dotenv
@@ -23,11 +24,13 @@ RESULTS_DIR = "results"
 
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GEMINI_MODELS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
 
 KAKAO_KEYWORD_ENDPOINT = "https://dapi.kakao.com/v2/local/search/keyword.json"
 
-TIMEOUT = 30
+# 장소 검색·모델 목록은 금방 끝나지만, 리포트 생성은 수십 초가 걸린다
+HTTP_TIMEOUT = 30
+LLM_TIMEOUT = 120
 
 
 # ---------------------------------------------------------------- 공통 도구
@@ -45,6 +48,14 @@ def add_error(errors, step, error_type, message):
 
 class ConfigError(Exception):
     """API 키가 없을 때처럼, 프로그램을 계속할 수 없는 설정 문제."""
+
+
+def api_message(response):
+    """오류 응답에서 사람이 읽을 메시지만 꺼낸다. 없으면 본문 앞부분."""
+    try:
+        return response.json().get("error", {}).get("message", "")[:300]
+    except ValueError:
+        return response.text[:200]
 
 
 # ---------------------------------------------------------------- CLI
@@ -184,7 +195,7 @@ def check_keys(keys):
             KAKAO_KEYWORD_ENDPOINT,
             headers={"Authorization": f"KakaoAK {kakao}"},
             params={"query": "서울 맛집", "size": 1},
-            timeout=TIMEOUT,
+            timeout=HTTP_TIMEOUT,
         )
         if response.status_code == 200:
             count = len(response.json().get("documents", []))
@@ -209,14 +220,15 @@ def check_keys(keys):
     print("\n[Gemini] API 키 점검")
     gemini = keys["gemini"]
     print(f"   형태: {describe_key(gemini)}")
-    if not gemini.startswith("AIza"):
-        print("   ! Google AI Studio 키는 보통 'AIza' 로 시작합니다.")
+    # AI Studio 키는 예전 'AIza...' 형식과 새 'AQ....' 형식이 함께 쓰인다
+    if not gemini.startswith(("AIza", "AQ.")):
+        print("   ! AI Studio 키는 보통 'AIza' 또는 'AQ.' 로 시작합니다.")
 
     try:
         response = requests.get(
             GEMINI_MODELS_ENDPOINT,
             headers={"x-goog-api-key": gemini},
-            timeout=TIMEOUT,
+            timeout=HTTP_TIMEOUT,
         )
         if response.status_code == 200:
             names = [
@@ -224,13 +236,22 @@ def check_keys(keys):
                 for model in response.json().get("models", [])
                 if "generateContent" in model.get("supportedGenerationMethods", [])
             ]
-            print(f"   ✓ 정상 (쓸 수 있는 모델 {len(names)}개)")
-            if keys["model"] in names:
-                print(f"   ✓ 설정된 모델 '{keys['model']}' 사용 가능")
-            else:
-                print(f"   ✗ 설정된 모델 '{keys['model']}' 을(를) 쓸 수 없습니다.")
+            print(f"   ✓ 키 정상 (목록에 모델 {len(names)}개)")
+
+            # 목록에 이름이 있어도 실제로는 막힌 모델이 있다.
+            # (단종된 모델은 목록에 남아 있지만 generateContent에서 404가 난다)
+            try:
+                call_gemini(keys, "한 단어로만 답하세요: 하늘색은?")
+                print(f"   ✓ 모델 '{keys['model']}' 로 생성 성공")
+            except RuntimeError as exc:
+                print(f"   ✗ 모델 '{keys['model']}' 생성 실패")
+                for line in str(exc).splitlines():
+                    print(f"     {line}")
                 if names:
-                    print(f"     .env 의 GEMINI_MODEL 을 이 중 하나로 바꾸세요: {', '.join(names[:5])}")
+                    print(f"     쓸 수 있는 모델 예: {', '.join(names[:5])}")
+                all_ok = False
+            except requests.RequestException as exc:
+                print(f"   ✗ 생성 요청 실패: {exc}")
                 all_ok = False
         elif response.status_code in (400, 401, 403):
             # 키가 틀리면 Gemini는 401이 아니라 400 INVALID_ARGUMENT 로 답한다
@@ -251,7 +272,7 @@ def check_keys(keys):
 # ---------------------------------------------------------------- Gemini (POST)
 
 
-def call_gemini(keys, prompt, as_json=False):
+def call_gemini(keys, prompt, as_json=False, busy_retry=True):
     """Gemini에 POST로 프롬프트를 보내고 생성된 텍스트를 돌려준다.
 
     REST 관점에서 볼 것:
@@ -271,16 +292,31 @@ def call_gemini(keys, prompt, as_json=False):
     if as_json:
         body["generationConfig"]["responseMimeType"] = "application/json"
 
-    response = requests.post(url, headers=headers, json=body, timeout=TIMEOUT)
+    response = requests.post(url, headers=headers, json=body, timeout=LLM_TIMEOUT)
 
-    if response.status_code == 401 or response.status_code == 403:
-        raise RuntimeError(f"인증 실패(HTTP {response.status_code}). GEMINI_API_KEY를 확인하세요.")
+    if response.status_code in (400, 401, 403):
+        raise RuntimeError(
+            f"인증 실패(HTTP {response.status_code}). GEMINI_API_KEY를 확인하세요.\n"
+            f"  API 응답: {api_message(response)}"
+        )
     if response.status_code == 429:
         raise RuntimeError("요청 한도 초과(HTTP 429). 잠시 후 다시 시도하세요.")
-    if response.status_code == 404:
+    if response.status_code == 503:
+        # 서버가 붐비는 일시적 상태다. 딱 한 번만 쉬었다 다시 보낸다.
+        if busy_retry:
+            log("   ", "모델이 혼잡합니다(503) — 5초 뒤 1회 재시도합니다.")
+            time.sleep(5)
+            return call_gemini(keys, prompt, as_json=as_json, busy_retry=False)
         raise RuntimeError(
-            f"모델을 찾을 수 없습니다(HTTP 404): {keys['model']}\n"
-            "  --list-models 로 사용 가능한 모델을 확인한 뒤 .env의 GEMINI_MODEL을 바꾸세요."
+            f"모델이 일시적으로 혼잡합니다(HTTP 503): {keys['model']}\n"
+            "  잠시 후 다시 실행하거나, .env의 GEMINI_MODEL을 다른 모델로 바꿔 보세요."
+        )
+    if response.status_code == 404:
+        # 구글은 모델이 단종되면 대체 모델 이름을 응답 메시지에 직접 적어 준다
+        raise RuntimeError(
+            f"모델을 쓸 수 없습니다(HTTP 404): {keys['model']}\n"
+            f"  API 응답: {api_message(response)}\n"
+            "  --list-models 로 목록을 확인한 뒤 .env의 GEMINI_MODEL을 바꾸세요."
         )
     response.raise_for_status()
 
@@ -301,7 +337,7 @@ def list_models(keys):
     response = requests.get(
         GEMINI_MODELS_ENDPOINT,
         headers={"x-goog-api-key": keys["gemini"]},
-        timeout=TIMEOUT,
+        timeout=HTTP_TIMEOUT,
     )
     response.raise_for_status()
 
@@ -436,7 +472,7 @@ def search_restaurants(keys, city, size, errors):
 
     try:
         response = requests.get(
-            KAKAO_KEYWORD_ENDPOINT, headers=headers, params=params, timeout=TIMEOUT
+            KAKAO_KEYWORD_ENDPOINT, headers=headers, params=params, timeout=HTTP_TIMEOUT
         )
     except requests.RequestException as exc:
         add_error(errors, "place_search", "NETWORK_ERROR", exc)
