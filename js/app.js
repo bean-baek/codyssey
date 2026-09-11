@@ -1,16 +1,175 @@
 /**
- * js/app.js — 부트스트랩
+ * js/app.js — 부트스트랩과 키 바인딩
  *
- * 화면 모듈을 한 번씩 켜고 라우팅을 시작한다. 모든 AI 호출은
- * js/core/ai.js 한 곳을 거치므로 여기에는 fetch 가 없다.
+ * 화면에 버튼이 있는 기능도 전부 명령으로 한 번 더 등록한다.
+ * AGENTS.md 1장의 호출 트리거(`⌘Enter`, `>퇴고 요청`, `⌘K`)를 그대로 따른 것이고,
+ * 손을 키보드에서 떼지 않고 쓰는 것이 이 도구의 사용 방식이다.
  */
 
-import { initNav } from './core/nav.js';
+import { initNav, go } from './core/nav.js';
 import { initPersona } from './ui/persona.js';
 import { initEditor } from './ui/editor.js';
-import { initAssist } from './ui/assist.js';
+import { initAssist, askAssist } from './ui/assist.js';
+import { initCompare, toggle as toggleCompare } from './ui/compare.js';
+import { initPalette, register, open as openPalette, isOpen as paletteOpen, close as closePalette } from './ui/palette.js';
 
 const persona = initPersona();
-initEditor(() => persona.read());
+const editor = initEditor(() => persona.read());
+initCompare(() => editor.getText());
 initAssist();
+initPalette();
 initNav();
+
+/* ─────────────────────────────────────────── 명령 등록 */
+
+const inRevise = () => location.hash === '#revise' || location.hash === '';
+
+register({
+  id: 'revise.run',
+  title: '퇴고 요청',
+  hint: '원고 전체를 문장 단위로 검토합니다',
+  keys: ['⌘', '↵'],
+  when: inRevise,
+  run: () => editor.run(),
+});
+
+register({
+  id: 'revise.compare',
+  title: '비교 보기 전환',
+  hint: '원본과 수정본을 나란히 봅니다',
+  keys: ['⌘', '\\'],
+  when: inRevise,
+  run: () => toggleCompare(editor.getText()),
+});
+
+register({
+  id: 'revise.applyAll',
+  title: '남은 제안 모두 반영',
+  keys: ['⇧', '⌘', '↵'],
+  when: () => inRevise() && editor.pendingCount() > 0,
+  run: () => editor.applyRemaining(),
+});
+
+register({
+  id: 'revise.reset',
+  title: '원본으로 되돌리기',
+  hint: '퇴고 요청 시점의 원고로 복구합니다',
+  when: inRevise,
+  run: () => editor.resetToBaseline(),
+});
+
+register({
+  id: 'revise.persona',
+  title: '편집 방침 열고 닫기',
+  keys: ['⌘', ','],
+  when: inRevise,
+  run: () => persona.toggleDrawer(),
+});
+
+register({
+  id: 'revise.sample',
+  title: '예시 원고 넣기',
+  when: inRevise,
+  run: () => editor.insertSample(),
+});
+
+/* 선택한 텍스트를 도우미로 — AGENTS.md 의 '텍스트 선택' 트리거 */
+
+register({
+  id: 'assist.synonym',
+  title: '유의어 찾기 (선택한 단어)',
+  hint: '원고에서 단어를 선택한 뒤 실행하세요',
+  keys: ['⌘', 'K', '?'],
+  run: () => {
+    const word = editor.selection();
+    if (!word) {
+      go('assist');
+      askAssist('synonym', '', '');
+      return;
+    }
+    go('assist');
+    askAssist('synonym', word, editor.sentenceAtCursor());
+  },
+});
+
+register({
+  id: 'assist.impression',
+  title: '이 문장의 인상 보기',
+  hint: '커서가 놓인 문장을 그대로 보냅니다',
+  run: () => {
+    const sentence = editor.selection() || editor.sentenceAtCursor();
+    go('assist');
+    askAssist('impression', sentence, '');
+  },
+});
+
+register({
+  id: 'assist.recall',
+  title: '그 단어 뭐였지 (설명으로 찾기)',
+  run: () => {
+    go('assist');
+    askAssist('recall', editor.selection(), '');
+  },
+});
+
+register({
+  id: 'assist.classify',
+  title: '원고 분류 태그 제안',
+  run: () => {
+    go('assist');
+    askAssist('classify', editor.getText().slice(0, 400), '');
+  },
+});
+
+/* 이동 */
+
+[
+  ['home', '홈'],
+  ['revise', '퇴고'],
+  ['assist', '도우미'],
+  ['design', '설계'],
+].forEach(([id, label]) =>
+  register({
+    id: `go.${id}`,
+    title: `이동: ${label}`,
+    group: '이동',
+    run: () => go(id),
+  })
+);
+
+/* ─────────────────────────────────────────── 전역 단축키 */
+
+const isMac = navigator.platform.toUpperCase().includes('MAC');
+const mod = (e) => (isMac ? e.metaKey : e.ctrlKey);
+
+addEventListener('keydown', (e) => {
+  // 팔레트 열기 — ⌘K / ⌘⇧P
+  if (mod(e) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    paletteOpen() ? closePalette() : openPalette();
+    return;
+  }
+  if (mod(e) && e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+    e.preventDefault();
+    openPalette();
+    return;
+  }
+
+  if (paletteOpen()) return;   // 팔레트 안에서는 자체 키 처리를 쓴다
+
+  if (mod(e) && e.key === 'Enter') {
+    e.preventDefault();
+    if (e.shiftKey) editor.applyRemaining();
+    else editor.run();
+    return;
+  }
+  if (mod(e) && e.key === '\\') {
+    e.preventDefault();
+    toggleCompare(editor.getText());
+    return;
+  }
+  if (mod(e) && e.key === ',') {
+    e.preventDefault();
+    persona.toggleDrawer();
+  }
+});

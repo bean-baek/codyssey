@@ -70,13 +70,14 @@ export function initPersona() {
   // 방침 서랍 — 기본은 접어 둔다. 원고가 화면의 주인이어야 한다.
   const toggle = document.getElementById('persona-toggle');
   const drawer = document.getElementById('persona-drawer');
-  toggle.addEventListener('click', () => {
+  function toggleDrawer() {
     const open = toggle.getAttribute('aria-expanded') === 'true';
     toggle.setAttribute('aria-expanded', String(!open));
     drawer.hidden = open;
-  });
+  }
+  toggle.addEventListener('click', toggleDrawer);
 
   write(loadPersona());
 
-  return { read };
+  return { read, toggleDrawer };
 }
