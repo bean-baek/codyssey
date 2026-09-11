@@ -13,13 +13,18 @@ from http.server import BaseHTTPRequestHandler
 
 from anthropic import Anthropic
 
-MODEL_REVISE = "claude-sonnet-5"
+# 모델 ID와 엔드포인트는 환경 변수로 바꿀 수 있다.
+# 배포처(직접 호출 / 학습용 프록시)에 따라 쓸 수 있는 모델이 달라서,
+# 코드를 고치지 않고 .env 만으로 옮겨 갈 수 있어야 한다.
+MODEL_REVISE = os.environ.get("MODEL_REVISE") or "claude-sonnet-4"
+BASE_URL = os.environ.get("ANTHROPIC_BASE_URL") or None
+
 MAX_TOKENS = 2000
 TIMEOUT_SEC = 25.0
 
-# Sonnet 5는 temperature / top_p / top_k 를 받지 않는다 (보내면 400).
-# 출력 흔들림은 effort 로 조절한다. 퇴고는 판단의 폭보다 일관성이 중요하므로
-# thinking 을 끄고 effort 를 medium 으로 둔다 — 20초 클라이언트 타임아웃도 이 조합이라야 든다.
+# 이 SDK 버전에는 temperature / top_p / top_k 가 없다. 출력 흔들림은 effort 로 조절한다.
+# 퇴고는 판단의 폭보다 일관성이 중요하므로 thinking 을 끄고 effort 를 medium 으로 둔다.
+# 20초 클라이언트 타임아웃도 이 조합이라야 든다.
 THINKING = {"type": "disabled"}
 EFFORT = "medium"
 
@@ -276,7 +281,9 @@ class handler(BaseHTTPRequestHandler):
         if not api_key:
             return self._send(500, error("UPSTREAM_ERROR", "잠시 후 다시 시도해 주세요."))
 
-        client = Anthropic(api_key=api_key, timeout=TIMEOUT_SEC, max_retries=1)
+        client = Anthropic(
+            api_key=api_key, base_url=BASE_URL, timeout=TIMEOUT_SEC, max_retries=1
+        )
 
         try:
             resp = client.messages.create(

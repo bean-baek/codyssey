@@ -38,7 +38,7 @@ AI가 글을 대신 써 주지 않습니다.
 | --- | --- |
 | 프론트엔드 | 순수 HTML / CSS / JavaScript (ES 모듈). 프레임워크·빌드 도구 없음 |
 | 백엔드 | Vercel Serverless Functions (Python) — `api/revise.py`, `api/assist.py` |
-| AI | Anthropic Claude — 퇴고는 Sonnet, 도우미는 Haiku |
+| AI | Claude — 퇴고는 Sonnet, 도우미는 Haiku (엔드포인트 교체 가능) |
 | 배포 | Vercel (GitHub 연동, `a1-3` 브랜치) |
 
 **두 엔드포인트를 나눈 이유**는 속도입니다. 퇴고는 문맥 판단과 사유 서술이 필요해
@@ -72,11 +72,24 @@ tests/sentences.test.mjs
 
 ## 환경 변수 설정
 
-이 서비스는 **`ANTHROPIC_API_KEY` 하나**만 필요합니다.
+| 변수 | 필수 | 설명 |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | ✅ | API 키 |
+| `ANTHROPIC_BASE_URL` | | 엔드포인트. 비워 두면 `api.anthropic.com` 직접 호출 |
+| `MODEL_REVISE` | | 퇴고 모델. 기본 `claude-sonnet-4` |
+| `MODEL_ASSIST` | | 도우미 모델. 기본 `claude-haiku-4` |
 
 ### 키 발급
 
-[console.anthropic.com](https://console.anthropic.com/settings/keys) → **Create Key**
+- **Anthropic 직접 사용**: [console.anthropic.com](https://console.anthropic.com/settings/keys) → Create Key.
+  `ANTHROPIC_BASE_URL`은 비워 둡니다.
+- **학습용 프록시 사용**: 제공받은 키와 주소를 함께 넣습니다.
+  프록시는 쓸 수 있는 모델이 다르므로 아래로 목록을 먼저 확인하세요.
+
+```bash
+curl -s "$ANTHROPIC_BASE_URL/v1/models" \
+  -H "x-api-key: $ANTHROPIC_API_KEY" -H "anthropic-version: 2023-06-01"
+```
 
 ### 로컬
 
@@ -88,6 +101,7 @@ cp .env.example .env
 
 ```
 ANTHROPIC_API_KEY=발급받은_키
+ANTHROPIC_BASE_URL=        # 프록시를 쓸 때만 주소 입력
 ```
 
 `.env`는 `.gitignore` 맨 위에 등록되어 있어 커밋되지 않습니다.
@@ -95,7 +109,8 @@ ANTHROPIC_API_KEY=발급받은_키
 ### Vercel
 
 프로젝트 → **Settings → Environment Variables** →
-Name `ANTHROPIC_API_KEY`, Value에 키를 붙여 넣고 Production·Preview·Development 모두 체크합니다.
+`ANTHROPIC_API_KEY`를 등록하고, 프록시를 쓴다면 `ANTHROPIC_BASE_URL`도 함께 넣습니다.
+Production·Preview·Development를 모두 체크하세요.
 **추가한 뒤에는 재배포해야 적용됩니다.**
 
 키가 없으면 API가 호출 전에 500 `UPSTREAM_ERROR`를 돌려주고,
@@ -177,7 +192,10 @@ node tests/sentences.test.mjs
 **모델 ID는 갱신됩니다.** 코드에서는 `MODEL_REVISE` / `MODEL_ASSIST` 상수
 한 곳에서만 참조하므로 그 줄만 고치면 됩니다.
 
-**Sonnet 계열은 `temperature`를 받지 않습니다.** 보내면 400입니다.
-그래서 퇴고는 `output_config.effort`로 출력 흔들림을 조절하고,
-도우미의 Haiku는 `temperature`를 그대로 씁니다. 두 엔드포인트의 설정 항목이
-다른 것은 실수가 아니라 모델 세대 차이입니다. 자세한 내용은 `AGENTS.md` 1장에 있습니다.
+**출력 흔들림 조절 파라미터가 모델마다 다릅니다.** 이 SDK 버전에는 `temperature`가
+아예 없고, 대체 수단인 `output_config.effort`도 `claude-sonnet-4`는 받지만
+`claude-haiku-4`는 400을 돌려줍니다. 그래서 퇴고만 `effort`를 쓰고 도우미는 쓰지 않습니다.
+두 엔드포인트의 설정이 다른 것은 실수가 아닙니다. 자세한 내용은 `AGENTS.md` 1장에 있습니다.
+
+**엔드포인트를 바꾸면 쓸 수 있는 모델도 바뀝니다.** 옮기기 전에 `/v1/models`로
+목록을 확인하고 `MODEL_REVISE` / `MODEL_ASSIST`를 맞춰 주세요.
