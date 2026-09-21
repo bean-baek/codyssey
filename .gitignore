@@ -17,5 +17,11 @@ venv/
 .vscode/
 .idea/
 .DS_Store
-.claude/
+# .claude/ 를 통째로 제외하면 하위 negation 이 먹지 않는다.
+# 디렉터리가 제외되면 git 이 안으로 들어가지 않기 때문이다.
+.claude/*
+!.claude/agents/
 node_modules/
+
+# QA 실행 산출물 — 보고서와 이력은 커밋하고 크롬 프로파일만 제외
+qa/.chrome-profile/
