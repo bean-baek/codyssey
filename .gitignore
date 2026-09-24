@@ -25,3 +25,4 @@ node_modules/
 
 # QA 실행 산출물 — 보고서와 이력은 커밋하고 크롬 프로파일만 제외
 qa/.chrome-profile/
+.vercel
