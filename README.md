@@ -3,7 +3,7 @@
 완성한 초고에서 **고칠 지점만 문장 단위로 짚어 주는** 한국어 퇴고 웹 서비스입니다.
 AI가 글을 대신 써 주지 않습니다.
 
-**배포 URL**: (배포 후 여기에 기입)
+**배포 URL**: https://codeyssay.vercel.app
 
 ---
 
@@ -179,11 +179,21 @@ node tests/sentences.test.mjs
 4. **Settings → Environment Variables**에 `ANTHROPIC_API_KEY`를 등록합니다.
 5. 재배포 후 배포 URL에서 네비게이션·반응형·AI 기능을 확인합니다.
 
-빌드 설정은 건드릴 것이 없습니다. 정적 파일은 루트에서 그대로 서빙되고,
-`api/*.py`는 `requirements.txt`를 보고 Python 함수로 자동 인식됩니다.
+CLI로 바로 배포할 수도 있습니다: `npx vercel deploy --prod`
+(환경 변수는 `npx vercel env add ANTHROPIC_API_KEY production`).
 
-`vercel.json`은 함수 실행 시간만 늘려 둡니다. 퇴고는 서버 타임아웃이 25초인데
-플랫폼 기본 한도가 그보다 짧으면 모델이 답하기 전에 잘리기 때문입니다.
+정적 파일은 루트에서 그대로 서빙되고, `api/*.py`는 각각 Python 함수가 됩니다.
+
+`vercel.json`이 하는 일은 두 가지입니다.
+
+- `"framework": null` — 루트에 `requirements.txt`가 있으면 Vercel이 프로젝트 전체를
+  Python 앱 하나로 보고 진입점을 찾다가 `No python entrypoint found`로 배포에 실패합니다.
+  프레임워크를 비워 "정적 파일 + `api/` 함수" 구조로 인식시킵니다.
+- 함수 실행 시간 연장 — 퇴고는 서버 타임아웃이 25초인데
+  플랫폼 기본 한도가 그보다 짧으면 모델이 답하기 전에 잘립니다.
+
+`.vercelignore`는 CLI 배포 때 `.env`와 로컬 산출물이 올라가지 않게 막습니다.
+Vercel CLI는 `.gitignore`를 보지 않기 때문입니다.
 
 ---
 

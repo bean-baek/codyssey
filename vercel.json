@@ -1,6 +1,11 @@
 {
+  "framework": null,
   "functions": {
-    "api/revise.py": { "maxDuration": 30 },
-    "api/assist.py": { "maxDuration": 15 }
+    "api/revise.py": {
+      "maxDuration": 30
+    },
+    "api/assist.py": {
+      "maxDuration": 15
+    }
   }
 }

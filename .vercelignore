@@ -1,0 +1,7 @@
+# vercel CLI 는 .gitignore 를 보지 않는다. 키와 로컬 산출물이 업로드되지 않게 따로 막는다.
+.env
+.env.*
+.venv/
+qa/.chrome-profile/
+export/
+prompts.json
