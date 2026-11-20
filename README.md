@@ -187,6 +187,17 @@ node tests/sentences.test.mjs
 
 ---
 
+## 스크린샷
+
+| 파일 | 내용 |
+| --- | --- |
+| `screenshots/01_desktop_home.png` | 데스크톱(1440px) — 홈 |
+| `screenshots/02_desktop_ai_revise.png` | 데스크톱 — 퇴고 AI 동작 (제안 4건) |
+| `screenshots/03_mobile_home.png` | 모바일(390px) — 홈 |
+| `screenshots/04_mobile_ai_revise.png` | 모바일 — 퇴고 AI 동작 |
+
+---
+
 ## 알아두면 좋은 것
 
 **모델 ID는 갱신됩니다.** 코드에서는 `MODEL_REVISE` / `MODEL_ASSIST` 상수

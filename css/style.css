@@ -443,7 +443,8 @@ td { color: var(--ink-2); }
   .wrap { padding: 0 16px; }
   .section { padding: 28px 0 64px; }
 
-  .topbar-inner { flex-direction: column; align-items: stretch; gap: 6px; padding: 9px 0; }
+  /* 좌우 16px 는 .wrap 과 같게 둔다. 0 으로 두면 .wrap 의 좌우 여백까지 지워져 로고와 메뉴가 화면 끝에 붙는다 */
+  .topbar-inner { flex-direction: column; align-items: stretch; gap: 6px; padding: 9px 16px; }
   /* 항목이 늘어나도 페이지가 가로로 밀리지 않게 네비게이션 자체를 스크롤시킨다.
      여백까지 채우려고 음수 마진을 쓰면 그 요소가 뷰포트 밖으로 나가
      페이지에 가로 스크롤이 생긴다. 안쪽에서만 스크롤시킨다. */
