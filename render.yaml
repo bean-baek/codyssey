@@ -1,0 +1,23 @@
+# Render Blueprint — 대시보드에서 New + → Blueprint → 이 저장소 선택(브랜치 a2-2)
+services:
+  - type: web
+    name: ai-interest-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_MAX_TOKENS
+        value: "600"
+      - key: OPENAI_API_KEY
+        sync: false          # 비밀 값: 대시보드에서 직접 입력
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false          # 예: https://<프로젝트>.vercel.app

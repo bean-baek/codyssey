@@ -19,3 +19,9 @@ venv/
 # 브라우저 자동화 임시 파일
 .playwright-mcp/
 .pytest_cache/
+
+# 서비스 계정 키 파일
+*firebase-adminsdk*.json
+serviceAccount*.json
+# Vercel CLI
+.vercel/

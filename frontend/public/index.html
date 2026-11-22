@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 관심도 비서</title>
+  <meta name="description" content="AI 이미지·영상 생성 플랫폼 8종의 위키백과 조회수로 관심도 데이터를 관리하고, 그 데이터를 아는 AI와 대화합니다.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M2 22 L9 18 L13 20 L17 4 L20 16 L24 14 L30 17' fill='none' stroke='%233048E8' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <script>
+    // 첫 페인트 전에 테마를 정해 깜빡임을 막는다
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+  <script src="config.js"></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1>AI 관심도 비서</h1>
+      <p class="sub">AI 이미지·영상 생성 도구 8종의 위키백과 조회수 합계를 아는 대화 상대</p>
+    </div>
+    <div class="top-actions">
+      <span id="server-status" class="status" data-state="pending" role="status">서버 연결 중</span>
+      <button id="theme-toggle" class="icon-btn" type="button" aria-label="다크 모드 전환" title="다크 모드 전환">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="wake-banner" class="banner" hidden>
+    무료 서버가 잠들어 있어 깨우는 중입니다. 첫 연결은 최대 1분 걸릴 수 있어요.
+  </div>
+
+  <section class="signal" aria-labelledby="signal-title">
+    <div class="signal-head">
+      <h2 id="signal-title">하루 조회수, 최근 365일</h2>
+      <p id="signal-readout" class="readout" aria-live="polite">그래프를 짚으면 그날 값이 보입니다</p>
+      <div class="legend" aria-hidden="true">
+        <span><i class="lg-line"></i>일별</span>
+        <span><i class="lg-ma"></i>7일 평균</span>
+        <span><i class="lg-spike"></i>급증 메모가 있는 날</span>
+      </div>
+    </div>
+    <div id="signal-chart" class="signal-chart" role="img" aria-label="최근 365일 일별 조회수 그래프"></div>
+  </section>
+
+  <nav class="mobile-tabs" aria-label="화면 전환">
+    <button type="button" data-pane="history">대화 기록</button>
+    <button type="button" data-pane="chat" aria-current="true">채팅</button>
+    <button type="button" data-pane="data">요약·데이터</button>
+  </nav>
+
+  <main class="workspace">
+    <!-- 대화 기록 -->
+    <aside class="pane pane-history" data-pane="history" aria-labelledby="history-title">
+      <div class="pane-head">
+        <h2 id="history-title">대화 기록</h2>
+        <button id="new-chat" class="btn-quiet" type="button">새 대화</button>
+      </div>
+      <ul id="conv-list" class="conv-list"></ul>
+      <p id="conv-empty" class="empty" hidden>아직 저장된 대화가 없습니다. 질문을 보내면 자동으로 저장돼요.</p>
+    </aside>
+
+    <!-- 채팅 -->
+    <section class="pane pane-chat is-active" data-pane="chat" aria-labelledby="chat-title">
+      <div class="pane-head">
+        <h2 id="chat-title">새 대화</h2>
+        <span id="model-badge" class="badge" hidden></span>
+      </div>
+      <div id="messages" class="messages" aria-live="polite">
+        <div class="intro" id="intro">
+          <p>저장된 데이터의 요약을 알고 답합니다. 이렇게 물어보세요.</p>
+          <div class="suggestions">
+            <button type="button" class="suggest">최근 한 달 관심도는 어때?</button>
+            <button type="button" class="suggest">가장 조회수가 높았던 날은 언제고 왜 그랬을까?</button>
+            <button type="button" class="suggest">무슨 요일에 가장 많이 찾아봐?</button>
+            <button type="button" class="suggest">2026년 3월 하순 일별 값을 보여줘</button>
+          </div>
+        </div>
+      </div>
+      <form id="chat-form" class="composer">
+        <label for="chat-input" class="sr-only">질문</label>
+        <textarea id="chat-input" rows="1" maxlength="1000" placeholder="데이터에 대해 물어보세요" required></textarea>
+        <button id="send-btn" class="btn-primary" type="submit">보내기</button>
+      </form>
+    </section>
+
+    <!-- 요약 + 데이터 -->
+    <aside class="pane pane-data" data-pane="data" aria-labelledby="summary-title">
+      <div class="pane-head">
+        <h2 id="summary-title">현재 요약</h2>
+        <span class="hint">AI가 보는 값</span>
+      </div>
+      <dl id="summary" class="summary">
+        <div class="wide"><dt>기간</dt><dd data-k="period">–</dd></div>
+        <div><dt>개수</dt><dd data-k="count">–</dd></div>
+        <div><dt>하루 평균</dt><dd data-k="average">–</dd></div>
+        <div><dt>최대</dt><dd data-k="max">–</dd></div>
+        <div><dt>최소</dt><dd data-k="min">–</dd></div>
+        <div class="wide"><dt>최근 추세</dt><dd data-k="trend">–</dd></div>
+        <div class="wide"><dt>변동성</dt><dd data-k="volatility">–</dd></div>
+      </dl>
+
+      <div class="pane-head data-head">
+        <h2>데이터 관리</h2>
+        <div class="export">
+          <a id="export-csv" class="btn-quiet" download>CSV</a>
+          <a id="export-json" class="btn-quiet" download>JSON</a>
+        </div>
+      </div>
+
+      <form id="data-form" class="data-form">
+        <input type="hidden" id="edit-id">
+        <label>날짜<input type="date" id="f-date" required></label>
+        <label>값<input type="number" id="f-value" min="0" step="1" inputmode="numeric" required></label>
+        <label class="wide">메모<input type="text" id="f-memo" maxlength="200" placeholder="예: Sora 신모델 발표"></label>
+        <div class="form-actions wide">
+          <button id="data-submit" class="btn-primary" type="submit">추가</button>
+          <button id="data-cancel" class="btn-quiet" type="button" hidden>수정 취소</button>
+          <span id="data-msg" class="form-msg" role="status"></span>
+        </div>
+      </form>
+
+      <div class="data-tools">
+        <label class="sr-only" for="data-filter">월 필터</label>
+        <input type="month" id="data-filter" title="월로 거르기">
+        <span id="data-count" class="hint"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th scope="col">날짜</th><th scope="col" class="num">값</th><th scope="col">메모</th><th scope="col"><span class="sr-only">작업</span></th></tr></thead>
+          <tbody id="data-rows"></tbody>
+        </table>
+      </div>
+      <button id="data-more" class="btn-quiet more" type="button" hidden>더 보기</button>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
