@@ -28,7 +28,7 @@
 | --- | --- |
 | 백엔드 | Python 3.12, FastAPI, Pydantic v2, Uvicorn |
 | DB | Firebase Firestore (`firebase-admin`) |
-| AI | OpenAI Chat Completions + Function Calling (`openai`) |
+| AI | GPT(`gpt-5.4-mini`) — OpenAI Chat Completions + Function Calling (`openai` SDK), Codyssey 학습용 프록시 경유 |
 | 프론트엔드 | HTML / CSS / JavaScript(ES Modules), 프레임워크·차트 라이브러리 없음 (그래프는 SVG 직접 그림) |
 | 배포 | Render(백엔드), Vercel(프론트) |
 | 보너스 | MCP Server(`mcp`), 통계 API, 그래프, CSV/JSON 내보내기, 다크 모드 |
@@ -69,13 +69,13 @@ python3 -m http.server 5500 -d public               # http://localhost:5500
 
 | 이름 | 필수 | 설명 |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | ✔ | OpenAI API 키 |
+| `OPENAI_API_KEY` | ✔ | GPT API 키. Codyssey 학습용 키(`sk-cody-…`) 또는 OpenAI 키(`sk-proj-…`) |
+| `OPENAI_BASE_URL` | ✔* | *Codyssey 키일 때 `https://copa.codyssey.kr/v1`. OpenAI 키면 비움 |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | ✔ | 서비스 계정 키 JSON **내용 전체**(한 줄). 로컬에서는 대신 `FIREBASE_SERVICE_ACCOUNT_PATH`(키 파일 경로)도 가능 |
 | `ALLOWED_ORIGINS` | ✔ | CORS 허용 프론트 주소, 쉼표 구분. 예: `https://ai-interest.vercel.app` |
-| `OPENAI_MODEL` | | 기본 `gpt-4o-mini` |
-| `OPENAI_MAX_TOKENS` | | 답변 1회 최대 토큰(과금 상한), 기본 600 |
+| `OPENAI_MODEL` | | 기본 `gpt-5.4-mini` |
+| `OPENAI_MAX_TOKENS` | | 답변 1회 최대 토큰(과금 상한), 기본 1200 |
 | `CHAT_RATE_PER_MINUTE` / `CHAT_DAILY_LIMIT` | | IP당 분당 채팅 수 / 서버 전체 하루 채팅 수, 기본 10 / 300 |
-| `OPENAI_BASE_URL` | | 프록시를 쓸 때만 |
 
 **프론트엔드 (Vercel)**
 
@@ -87,7 +87,7 @@ python3 -m http.server 5500 -d public               # http://localhost:5500
 
 **백엔드 — Render**
 1. Render 대시보드에서 **New → Blueprint**를 누르고 이 저장소(`a2-2` 브랜치)를 고릅니다. 루트의 [render.yaml](render.yaml)이 `rootDir: backend`, 빌드·시작 명령, 헬스체크를 지정합니다.
-2. 비밀 값 3개(`OPENAI_API_KEY`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `ALLOWED_ORIGINS`)를 대시보드에서 입력합니다.
+2. 비밀 값 3개(`OPENAI_API_KEY`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `ALLOWED_ORIGINS`)를 대시보드에서 입력합니다. `OPENAI_BASE_URL`(Codyssey 프록시)과 모델은 render.yaml에 이미 들어 있습니다.
 3. `https://<서비스>.onrender.com/docs`에서 Swagger를 확인합니다.
 
 **프론트엔드 — Vercel**
@@ -208,7 +208,7 @@ GPT는 학습 데이터만으로는 이 데이터를 모릅니다. 그래서 매
 - **CORS:** 프론트(Vercel)와 백엔드(Render)는 도메인이 다릅니다. 그래서 브라우저는 백엔드가 허락한 출처의 요청 응답만 읽게 해 줍니다. `ALLOWED_ORIGINS`에 적은 주소만 허용하고 `*`는 쓰지 않습니다. 아무 사이트에서나 내 API를 호출해 GPT 비용을 쓰지 못하게 하려는 것입니다. 테스트로 허용·차단을 확인합니다.
 - **환경 변수:** API 키, 서비스 계정 키, 허용 도메인, 프론트가 부를 API 주소는 환경(로컬/배포)마다 다르고, 일부는 비밀입니다. 코드에는 이름만 있고 값은 Render·Vercel 대시보드나 로컬 `.env`에 있습니다. `.env`와 키 파일 패턴은 `.gitignore`에 등록돼 커밋되지 않습니다.
 - **키는 백엔드에만:** OpenAI·Firebase 키는 브라우저로 내려가지 않습니다. 프론트가 아는 값은 공개돼도 되는 `API_BASE_URL` 하나입니다.
-- **과금 보호:** 답변 최대 토큰(`OPENAI_MAX_TOKENS=600`), 이전 대화는 최근 12개만 전송, IP당 분당 10회, 서버 전체 하루 300회 제한을 둡니다.
+- **과금 보호:** 답변 최대 토큰(`OPENAI_MAX_TOKENS=1200`), 이전 대화는 최근 12개만 전송, IP당 분당 10회, 서버 전체 하루 300회 제한을 둡니다.
 - **오류 처리:** GPT 인증 실패·한도 초과·시간 초과는 각각 502/429/504와 한국어 안내로 돌려줍니다. 예상 못 한 오류도 CORS 헤더가 붙은 500 JSON으로 돌려줘서 브라우저가 내용을 읽을 수 있게 했습니다. 실패한 채팅은 저장하지 않습니다.
 
 ## 보너스 1 — Function Calling + MCP Server

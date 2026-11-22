@@ -31,8 +31,8 @@ class Settings:
     # OpenAI
     openai_api_key: str = ""
     openai_base_url: str = ""          # 프록시를 쓸 때만. 비우면 공식 엔드포인트
-    openai_model: str = "gpt-4o-mini"
-    openai_max_tokens: int = 600       # 답변 1회 최대 토큰(과금 상한)
+    openai_model: str = "gpt-5.4-mini"
+    openai_max_tokens: int = 1200      # 답변 1회 최대 토큰(추론 모델은 생각에도 토큰을 씀). 과금 상한
 
     # Firestore
     firebase_service_account_json: str = ""   # JSON 문자열 그대로
@@ -61,8 +61,8 @@ def load_settings() -> Settings:
     return Settings(
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
         openai_base_url=os.getenv("OPENAI_BASE_URL", ""),
-        openai_model=os.getenv("OPENAI_MODEL", "") or "gpt-4o-mini",
-        openai_max_tokens=_int("OPENAI_MAX_TOKENS", 600),
+        openai_model=os.getenv("OPENAI_MODEL", "") or "gpt-5.4-mini",
+        openai_max_tokens=_int("OPENAI_MAX_TOKENS", 1200),
         firebase_service_account_json=os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON", ""),
         firebase_service_account_path=os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", ""),
         allowed_origins=origins,
