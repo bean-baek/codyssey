@@ -1,0 +1,570 @@
+{
+  "period": {
+    "start": "2022-01-01",
+    "end": "2026-11-19",
+    "days": 1784,
+    "data_points": 8707
+  },
+  "platforms": {
+    "Midjourney": {
+      "kind": "image",
+      "article": "Midjourney",
+      "start": "2022-06-26",
+      "end": "2026-11-19",
+      "rows_from_api": 1608,
+      "missing_days_filled_with_0": 0,
+      "analysis_start": "2022-06-26",
+      "days_trimmed_unsettled": 0,
+      "missing_filled_after_trim": 0,
+      "median_daily": 1490.0,
+      "max_daily": 12182,
+      "max_date": "2023-03-22",
+      "spike_days": 20
+    },
+    "Stable Diffusion": {
+      "kind": "image",
+      "article": "Stable_Diffusion",
+      "start": "2022-08-31",
+      "end": "2026-11-19",
+      "rows_from_api": 1542,
+      "missing_days_filled_with_0": 0,
+      "analysis_start": "2022-08-31",
+      "days_trimmed_unsettled": 0,
+      "missing_filled_after_trim": 0,
+      "median_daily": 1333.0,
+      "max_daily": 7326,
+      "max_date": "2022-10-05",
+      "spike_days": 1
+    },
+    "DALL-E": {
+      "kind": "image",
+      "article": "DALL-E",
+      "start": "2022-01-01",
+      "end": "2026-11-19",
+      "rows_from_api": 1784,
+      "missing_days_filled_with_0": 0,
+      "analysis_start": "2022-01-01",
+      "days_trimmed_unsettled": 0,
+      "missing_filled_after_trim": 0,
+      "median_daily": 871.5,
+      "max_daily": 13874,
+      "max_date": "2022-06-10",
+      "spike_days": 40
+    },
+    "Flux": {
+      "kind": "image",
+      "article": "Flux_(text-to-image_model)",
+      "start": "2024-11-18",
+      "end": "2026-11-19",
+      "rows_from_api": 732,
+      "missing_days_filled_with_0": 0,
+      "analysis_start": "2024-11-19",
+      "days_trimmed_unsettled": 1,
+      "missing_filled_after_trim": 0,
+      "median_daily": 220.0,
+      "max_daily": 1007,
+      "max_date": "2026-02-07",
+      "spike_days": 15
+    },
+    "Sora": {
+      "kind": "video",
+      "article": "Sora_(text-to-video_model)",
+      "start": "2024-02-15",
+      "end": "2026-11-19",
+      "rows_from_api": 1009,
+      "missing_days_filled_with_0": 0,
+      "analysis_start": "2024-02-15",
+      "days_trimmed_unsettled": 0,
+      "missing_filled_after_trim": 0,
+      "median_daily": 568.0,
+      "max_daily": 25396,
+      "max_date": "2026-03-25",
+      "spike_days": 36
+    },
+    "Runway": {
+      "kind": "video",
+      "article": "Runway_(company)",
+      "start": "2023-11-05",
+      "end": "2026-11-19",
+      "rows_from_api": 1111,
+      "missing_days_filled_with_0": 0,
+      "analysis_start": "2023-11-19",
+      "days_trimmed_unsettled": 14,
+      "missing_filled_after_trim": 0,
+      "median_daily": 254.0,
+      "max_daily": 729,
+      "max_date": "2024-08-26",
+      "spike_days": 24
+    },
+    "Kling": {
+      "kind": "video",
+      "article": "Kling_AI",
+      "start": "2024-06-27",
+      "end": "2026-11-19",
+      "rows_from_api": 766,
+      "missing_days_filled_with_0": 110,
+      "analysis_start": "2025-10-28",
+      "days_trimmed_unsettled": 488,
+      "missing_filled_after_trim": 0,
+      "median_daily": 216.0,
+      "max_daily": 876,
+      "max_date": "2025-12-28",
+      "spike_days": 12
+    },
+    "Veo": {
+      "kind": "video",
+      "article": "Veo_(text-to-video_model)",
+      "start": "2025-05-20",
+      "end": "2026-11-19",
+      "rows_from_api": 549,
+      "missing_days_filled_with_0": 0,
+      "analysis_start": "2025-05-21",
+      "days_trimmed_unsettled": 1,
+      "missing_filled_after_trim": 0,
+      "median_daily": 254.5,
+      "max_daily": 822,
+      "max_date": "2026-03-25",
+      "spike_days": 4
+    }
+  },
+  "yearly_mean_daily": {
+    "Midjourney": {
+      "2022": 3001,
+      "2023": 4591,
+      "2024": 1823,
+      "2025": 1136,
+      "2026": 697
+    },
+    "Stable Diffusion": {
+      "2022": 4264,
+      "2023": 3404,
+      "2024": 1839,
+      "2025": 1066,
+      "2026": 740
+    },
+    "DALL-E": {
+      "2022": 2233,
+      "2023": 2758,
+      "2024": 1103,
+      "2025": 662,
+      "2026": 423
+    },
+    "Flux": {
+      "2022": null,
+      "2023": null,
+      "2024": 173,
+      "2025": 244,
+      "2026": 258
+    },
+    "Sora": {
+      "2022": null,
+      "2023": null,
+      "2024": 907,
+      "2025": 826,
+      "2026": 971
+    },
+    "Runway": {
+      "2022": null,
+      "2023": 39,
+      "2024": 275,
+      "2025": 296,
+      "2026": 237
+    },
+    "Kling": {
+      "2022": null,
+      "2023": null,
+      "2024": null,
+      "2025": 179,
+      "2026": 279
+    },
+    "Veo": {
+      "2022": null,
+      "2023": null,
+      "2024": null,
+      "2025": 312,
+      "2026": 224
+    }
+  },
+  "share": {
+    "video_share_by_month": {
+      "2023-11": 0.2,
+      "2023-12": 0.5,
+      "2024-01": 1.0,
+      "2024-02": 30.2,
+      "2024-03": 21.9,
+      "2024-04": 19.1,
+      "2024-05": 18.5,
+      "2024-06": 17.9,
+      "2024-07": 17.8,
+      "2024-08": 17.1,
+      "2024-09": 17.8,
+      "2024-10": 14.7,
+      "2024-11": 16.1,
+      "2024-12": 23.4,
+      "2025-01": 16.8,
+      "2025-02": 14.1,
+      "2025-03": 14.7,
+      "2025-04": 20.9,
+      "2025-05": 26.8,
+      "2025-06": 28.3,
+      "2025-07": 27.4,
+      "2025-08": 28.1,
+      "2025-09": 26.0,
+      "2025-10": 56.8,
+      "2025-11": 46.0,
+      "2025-12": 45.3,
+      "2026-01": 41.4,
+      "2026-02": 40.1,
+      "2026-03": 55.3,
+      "2026-04": 53.4,
+      "2026-05": 50.6,
+      "2026-06": 37.3,
+      "2026-07": 39.9,
+      "2026-08": 39.1,
+      "2026-09": 38.3,
+      "2026-10": 38.0
+    },
+    "first_month_video_over_50": "2025-10",
+    "months_video_over_50": 4,
+    "yearly_totals": {
+      "2022": {
+        "image": 1906528,
+        "video": 0,
+        "video_share_pct": 0.0
+      },
+      "2023": {
+        "image": 3925120,
+        "video": 1696,
+        "video_share_pct": 0.0
+      },
+      "2024": {
+        "image": 1751450,
+        "video": 391983,
+        "video_share_pct": 18.3
+      },
+      "2025": {
+        "image": 1134477,
+        "video": 491406,
+        "video_share_pct": 30.2
+      },
+      "2026": {
+        "image": 684121,
+        "video": 552814,
+        "video_share_pct": 44.7
+      }
+    }
+  },
+  "momentum": {
+    "Midjourney": {
+      "recent_90d_mean": 488.3,
+      "chg_90d_vs_prev_90d_pct": -26.2,
+      "chg_90d_vs_year_ago_pct": -44.7,
+      "volatility_cv_90d": 0.14
+    },
+    "Stable Diffusion": {
+      "recent_90d_mean": 619.0,
+      "chg_90d_vs_prev_90d_pct": -3.3,
+      "chg_90d_vs_year_ago_pct": -34.1,
+      "volatility_cv_90d": 0.13
+    },
+    "DALL-E": {
+      "recent_90d_mean": 469.4,
+      "chg_90d_vs_prev_90d_pct": 43.8,
+      "chg_90d_vs_year_ago_pct": -22.4,
+      "volatility_cv_90d": 0.14
+    },
+    "Flux": {
+      "recent_90d_mean": 101.5,
+      "chg_90d_vs_prev_90d_pct": -58.9,
+      "chg_90d_vs_year_ago_pct": -51.4,
+      "volatility_cv_90d": 0.31
+    },
+    "Sora": {
+      "recent_90d_mean": 516.7,
+      "chg_90d_vs_prev_90d_pct": -23.9,
+      "chg_90d_vs_year_ago_pct": -66.7,
+      "volatility_cv_90d": 0.14
+    },
+    "Runway": {
+      "recent_90d_mean": 151.6,
+      "chg_90d_vs_prev_90d_pct": -24.0,
+      "chg_90d_vs_year_ago_pct": -46.4,
+      "volatility_cv_90d": 0.19
+    },
+    "Kling": {
+      "recent_90d_mean": 183.9,
+      "chg_90d_vs_prev_90d_pct": 0.8,
+      "chg_90d_vs_year_ago_pct": NaN,
+      "volatility_cv_90d": 0.26
+    },
+    "Veo": {
+      "recent_90d_mean": 148.3,
+      "chg_90d_vs_prev_90d_pct": -11.0,
+      "chg_90d_vs_year_ago_pct": -46.3,
+      "volatility_cv_90d": 0.26
+    }
+  },
+  "spike_events_top15": [
+    {
+      "platform": "Sora",
+      "start": "2026-03-24",
+      "peak": "2026-03-25",
+      "peak_views": 25396,
+      "baseline": 685.5,
+      "multiple": 37.0,
+      "days_to_1_5x_baseline": 53
+    },
+    {
+      "platform": "DALL-E",
+      "start": "2022-04-06",
+      "peak": "2022-04-07",
+      "peak_views": 2968,
+      "baseline": 131.0,
+      "multiple": 22.7,
+      "days_to_1_5x_baseline": null
+    },
+    {
+      "platform": "Sora",
+      "start": "2025-09-30",
+      "peak": "2025-10-08",
+      "peak_views": 5618,
+      "baseline": 334.0,
+      "multiple": 16.8,
+      "days_to_1_5x_baseline": null
+    },
+    {
+      "platform": "DALL-E",
+      "start": "2022-02-14",
+      "peak": "2022-02-15",
+      "peak_views": 1271,
+      "baseline": 135.5,
+      "multiple": 9.4,
+      "days_to_1_5x_baseline": 11
+    },
+    {
+      "platform": "DALL-E",
+      "start": "2022-06-08",
+      "peak": "2022-06-10",
+      "peak_views": 13874,
+      "baseline": 1512.0,
+      "multiple": 9.2,
+      "days_to_1_5x_baseline": 27
+    },
+    {
+      "platform": "Midjourney",
+      "start": "2026-06-18",
+      "peak": "2026-06-18",
+      "peak_views": 5007,
+      "baseline": 588.0,
+      "multiple": 8.5,
+      "days_to_1_5x_baseline": 7
+    },
+    {
+      "platform": "Sora",
+      "start": "2024-12-09",
+      "peak": "2024-12-10",
+      "peak_views": 3672,
+      "baseline": 434.0,
+      "multiple": 8.5,
+      "days_to_1_5x_baseline": 10
+    },
+    {
+      "platform": "Kling",
+      "start": "2025-12-28",
+      "peak": "2025-12-28",
+      "peak_views": 876,
+      "baseline": 192.0,
+      "multiple": 4.6,
+      "days_to_1_5x_baseline": 21
+    },
+    {
+      "platform": "DALL-E",
+      "start": "2022-02-20",
+      "peak": "2022-02-21",
+      "peak_views": 622,
+      "baseline": 143.5,
+      "multiple": 4.3,
+      "days_to_1_5x_baseline": 5
+    },
+    {
+      "platform": "Flux",
+      "start": "2026-02-07",
+      "peak": "2026-02-07",
+      "peak_views": 1007,
+      "baseline": 251.5,
+      "multiple": 4.0,
+      "days_to_1_5x_baseline": 1
+    },
+    {
+      "platform": "Midjourney",
+      "start": "2022-08-07",
+      "peak": "2022-08-08",
+      "peak_views": 6136,
+      "baseline": 1558.5,
+      "multiple": 3.9,
+      "days_to_1_5x_baseline": 54
+    },
+    {
+      "platform": "Flux",
+      "start": "2026-06-03",
+      "peak": "2026-06-03",
+      "peak_views": 691,
+      "baseline": 187.0,
+      "multiple": 3.7,
+      "days_to_1_5x_baseline": 3
+    },
+    {
+      "platform": "DALL-E",
+      "start": "2022-02-23",
+      "peak": "2022-02-23",
+      "peak_views": 520,
+      "baseline": 153.0,
+      "multiple": 3.4,
+      "days_to_1_5x_baseline": 3
+    },
+    {
+      "platform": "Runway",
+      "start": "2024-02-16",
+      "peak": "2024-02-26",
+      "peak_views": 380,
+      "baseline": 112.0,
+      "multiple": 3.4,
+      "days_to_1_5x_baseline": 90
+    },
+    {
+      "platform": "Midjourney",
+      "start": "2025-06-11",
+      "peak": "2025-06-12",
+      "peak_views": 3079,
+      "baseline": 1009.5,
+      "multiple": 3.1,
+      "days_to_1_5x_baseline": 2
+    }
+  ],
+  "spike_decay_summary": {
+    "events_over_3x": 20,
+    "median_days_to_recover": 8.5,
+    "max_days_to_recover": 90
+  },
+  "weekday_index": {
+    "Midjourney": {
+      "월": 1.074,
+      "화": 1.093,
+      "수": 1.076,
+      "목": 1.048,
+      "금": 0.982,
+      "토": 0.838,
+      "일": 0.873
+    },
+    "Stable Diffusion": {
+      "월": 1.077,
+      "화": 1.084,
+      "수": 1.074,
+      "목": 1.056,
+      "금": 0.974,
+      "토": 0.835,
+      "일": 0.88
+    },
+    "DALL-E": {
+      "월": 1.068,
+      "화": 1.091,
+      "수": 1.083,
+      "목": 1.07,
+      "금": 0.975,
+      "토": 0.823,
+      "일": 0.866
+    },
+    "Flux": {
+      "월": 1.057,
+      "화": 1.104,
+      "수": 1.06,
+      "목": 1.044,
+      "금": 0.974,
+      "토": 0.834,
+      "일": 0.86
+    },
+    "Sora": {
+      "월": 1.047,
+      "화": 1.057,
+      "수": 1.061,
+      "목": 1.043,
+      "금": 0.992,
+      "토": 0.874,
+      "일": 0.877
+    },
+    "Runway": {
+      "월": 1.055,
+      "화": 1.098,
+      "수": 1.082,
+      "목": 1.056,
+      "금": 0.988,
+      "토": 0.832,
+      "일": 0.862
+    },
+    "Kling": {
+      "월": 1.042,
+      "화": 1.06,
+      "수": 1.042,
+      "목": 0.991,
+      "금": 1.001,
+      "토": 0.867,
+      "일": 0.905
+    },
+    "Veo": {
+      "월": 1.011,
+      "화": 1.039,
+      "수": 1.07,
+      "목": 1.019,
+      "금": 0.984,
+      "토": 0.903,
+      "일": 0.901
+    }
+  },
+  "stl": {
+    "platform": "Midjourney",
+    "variance_share_pct": {
+      "trend": 95.7,
+      "seasonal": 1.8,
+      "resid": 3.5
+    },
+    "seasonal_amplitude_pct": 39.9,
+    "trend_peak": {
+      "date": "2023-03-28",
+      "views": 10512
+    },
+    "trend_latest": 452
+  },
+  "forecast": {
+    "platform": "Midjourney",
+    "horizon_days": 28,
+    "test_period": "2026-10-23 ~ 2026-11-19",
+    "metrics": {
+      "단순(마지막 값 유지)": {
+        "MAE": 91.2,
+        "MAPE_pct": 20.5
+      },
+      "28일 평균": {
+        "MAE": 55.9,
+        "MAPE_pct": 12.0
+      },
+      "계절 단순(지난주 같은 요일)": {
+        "MAE": 46.7,
+        "MAPE_pct": 10.0
+      },
+      "추세 연장(최근 90일 기울기)": {
+        "MAE": 95.8,
+        "MAPE_pct": 21.6
+      }
+    },
+    "best": "계절 단순(지난주 같은 요일)"
+  },
+  "figures": {
+    "trend": "figures/fig1_trend_moving_average.png",
+    "share": "figures/fig2_image_vs_video_share.png",
+    "momentum": "figures/fig3_recent_momentum.png",
+    "decay": "figures/fig4_spike_decay.png",
+    "weekday": "figures/fig5_weekday_pattern.png",
+    "stl": "figures/fig6_stl_decomposition.png",
+    "forecast": "figures/fig7_baseline_forecast.png"
+  }
+}
