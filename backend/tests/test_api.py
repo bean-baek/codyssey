@@ -255,3 +255,10 @@ def test_swagger_available():
     for p in ["/api/data", "/api/data/{doc_id}", "/api/data/summary", "/api/conversations",
               "/api/conversations/{conv_id}", "/api/chat"]:
         assert p in paths
+
+
+def test_openai_client_ignores_empty_base_url_env(monkeypatch):
+    from app.services.llm import OpenAILLM
+    monkeypatch.setenv("OPENAI_BASE_URL", "")
+    llm = OpenAILLM(Settings(openai_api_key="sk-test"))
+    assert str(llm._client.base_url).startswith("https://api.openai.com/v1")

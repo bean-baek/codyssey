@@ -38,7 +38,10 @@ class OpenAILLM:
 
         self.model = settings.openai_model
         self.max_tokens = settings.openai_max_tokens
-        self._client = OpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url or None,
+        # base_url=None 이면 SDK 가 환경 변수 OPENAI_BASE_URL 을 다시 읽는데, .env 에 빈 값(OPENAI_BASE_URL=)이
+        # 있으면 빈 주소가 되어 "Connection error" 가 난다. 그래서 비어 있으면 공식 주소를 직접 넣는다.
+        self._client = OpenAI(api_key=settings.openai_api_key,
+                              base_url=settings.openai_base_url or "https://api.openai.com/v1",
                               timeout=40, max_retries=1)
 
     def chat(self, messages: list[dict], tools: list[dict] | None) -> AssistantTurn:
@@ -52,6 +55,8 @@ class OpenAILLM:
         except openai.AuthenticationError as e:
             raise LLMError("OpenAI 인증 실패 — 서버의 OPENAI_API_KEY 를 확인하세요", 502) from e
         except openai.RateLimitError as e:
+            if getattr(e, "code", None) in ("insufficient_quota", "credit_balance_exhausted"):
+                raise LLMError("OpenAI 계정에 크레딧이 없습니다. platform.openai.com 의 Billing 에서 충전하세요", 402) from e
             raise LLMError("OpenAI 사용량 한도에 걸렸습니다. 잠시 후 다시 시도하세요", 429) from e
         except openai.APITimeoutError as e:
             raise LLMError("OpenAI 응답이 늦어 중단했습니다. 다시 시도하세요", 504) from e
